@@ -6,11 +6,11 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function NewInvoicePage() {
   const [clientEmail, setClientEmail] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(""); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [error, setError] = useState(""); // eslint-disable-line @typescript-eslint/no-unused-vars
   const { user } = useAuth();
 
   const handleSendInvoice = async () => {
@@ -33,7 +33,7 @@ export default function NewInvoicePage() {
       
       setSuccess(true);
       // Reset form or redirect
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error(err);
       setError(err.response?.data?.error || err.message || "Failed to create invoice.");
     } finally {

@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  const fetchUserProfile = async (userId: string, email: string | undefined) => {
+  async function fetchUserProfile(userId: string, email: string | undefined) {
     try {
       const { data, error } = await supabase
         .from("users")

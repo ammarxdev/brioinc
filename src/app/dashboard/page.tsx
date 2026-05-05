@@ -1,13 +1,57 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import "./overview.css";
 
 export default function OverviewPage() {
+  const { user } = useAuth();
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [cards, setCards] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user, fetchDashboardData]);
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch recent transactions
+      const { data: txData } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", user?.id)
+        .order("created_at", { ascending: false })
+        .limit(4);
+
+      // Fetch cards
+      const { data: cardData } = await supabase
+        .from("cards")
+        .select("*")
+        .eq("user_id", user?.id)
+        .limit(2);
+
+      setRecentTransactions(txData || []);
+      setCards(cardData || []);
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
   return (
     <div className="page-content">
       {/* Top Navbar Simulation for Tabs */}
       <div style={{ display: 'flex', gap: '2rem', marginBottom: '2rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '1rem' }}>
         <span style={{ fontWeight: 600, color: '#111827', borderBottom: '2px solid #111827', paddingBottom: '1rem', marginBottom: '-1rem' }}>Overview</span>
-        <span style={{ color: '#6b7280' }}>Transactions</span>
-        <span style={{ color: '#6b7280' }}>Cards</span>
+        <a href="/dashboard/transactions" style={{ color: '#6b7280', textDecoration: 'none' }}>Transactions</a>
+        <a href="/dashboard/cards" style={{ color: '#6b7280', textDecoration: 'none' }}>Cards</a>
       </div>
 
       <div className="overview-grid">
@@ -84,113 +128,72 @@ export default function OverviewPage() {
             <span style={{ fontWeight: 'bold', cursor: 'pointer' }}>...</span>
           </div>
           
-          <div className="credit-card">
-            <div className="card-top">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-                <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-                <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-                <line x1="12" y1="20" x2="12.01" y2="20" />
-              </svg>
-              <div className="card-chip"></div>
+          {cards.length === 0 ? (
+            <div style={{ padding: '1rem', border: '1px dashed #cbd5e1', borderRadius: '12px', textAlign: 'center', fontSize: '0.85rem', color: '#64748b' }}>
+              No cards issued.
             </div>
-            <div className="card-number">
-              •••• •••• •••• 4291
-            </div>
-          </div>
+          ) : (
+            cards.map(card => (
+              <div key={card.id} className="credit-card" style={{ marginBottom: '1rem' }}>
+                <div className="card-top">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+                    <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                    <line x1="12" y1="20" x2="12.01" y2="20" />
+                  </svg>
+                  <div className="card-chip"></div>
+                </div>
+                <div className="card-number">
+                  •••• •••• •••• {card.card_number?.slice(-4)}
+                </div>
+              </div>
+            ))
+          )}
 
           <div className="add-card">
             <div className="add-card-icon">+</div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Add ATM Card</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Issue Card</span>
           </div>
         </div>
 
         <div className="activity-section">
           <div className="section-header">
             <span className="section-title">Recent Activity</span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>View All</span>
+            <a href="/dashboard/transactions" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'inherit', textDecoration: 'none' }}>View All</a>
           </div>
 
           <div className="activity-list">
-            <div className="activity-item">
-              <div className="activity-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                </svg>
-              </div>
-              <div className="activity-details">
-                <div className="activity-name">Apple Store</div>
-                <div className="activity-time">Today, 2:45 PM</div>
-              </div>
-              <div className="activity-amount-col">
-                <div className="activity-amount">-$1,299.00</div>
-                <div className="activity-status status-processing">
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#9ca3af' }}></div>
-                  Processing
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>Loading...</div>
+            ) : recentTransactions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No recent activity.</div>
+            ) : (
+              recentTransactions.map(tx => (
+                <div key={tx.id} className="activity-item">
+                  <div className="activity-icon" style={{ backgroundColor: tx.amount > 0 ? '#dcfce7' : '#f1f5f9', color: tx.amount > 0 ? '#16a34a' : '#111827' }}>
+                    {tx.amount > 0 ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+                    )}
+                  </div>
+                  <div className="activity-details">
+                    <div className="activity-name">{tx.description}</div>
+                    <div className="activity-time">{new Date(tx.created_at).toLocaleDateString()}</div>
+                  </div>
+                  <div className="activity-amount-col">
+                    <div className={`activity-amount ${tx.amount > 0 ? 'amount-positive' : ''}`}>
+                      {tx.amount > 0 ? `+$${tx.amount.toLocaleString()}` : `-$${Math.abs(tx.amount).toLocaleString()}`}
+                    </div>
+                    <div className="activity-status status-completed">
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#16a34a' }}></div>
+                      {tx.status.toUpperCase()}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="activity-item">
-              <div className="activity-icon" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <polyline points="19 12 12 19 5 12" />
-                </svg>
-              </div>
-              <div className="activity-details">
-                <div className="activity-name">Salary Deposit</div>
-                <div className="activity-time">Yesterday, 9:00 AM</div>
-              </div>
-              <div className="activity-amount-col">
-                <div className="activity-amount amount-positive">+$8,450.00</div>
-                <div className="activity-status status-completed">
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#16a34a' }}></div>
-                  Completed
-                </div>
-              </div>
-            </div>
-
-            <div className="activity-item">
-              <div className="activity-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
-                  <polyline points="17 2 12 7 7 2" />
-                </svg>
-              </div>
-              <div className="activity-details">
-                <div className="activity-name">Netflix Premium</div>
-                <div className="activity-time">Oct 24, 2023</div>
-              </div>
-              <div className="activity-amount-col">
-                <div className="activity-amount">-$22.99</div>
-                <div className="activity-status status-completed">
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#16a34a' }}></div>
-                  Completed
-                </div>
-              </div>
-            </div>
-
-            <div className="activity-item">
-              <div className="activity-icon" style={{ backgroundColor: '#fee2e2', color: '#dc2626' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                  <line x1="12" y1="9" x2="12" y2="13" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-              </div>
-              <div className="activity-details">
-                <div className="activity-name">Wire Transfer (Intl)</div>
-                <div className="activity-time">Oct 22, 2023</div>
-              </div>
-              <div className="activity-amount-col">
-                <div className="activity-amount">-$450.00</div>
-                <div className="activity-status status-failed">
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#dc2626' }}></div>
-                  Failed
-                </div>
-              </div>
-            </div>
+              ))
+            )}
           </div>
         </div>
       </div>

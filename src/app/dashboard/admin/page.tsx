@@ -29,7 +29,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleApprove = async (userId: string) => {
+  const handleApprove = async (user: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
       const { error } = await supabase
         .from("users")
@@ -37,12 +37,47 @@ export default function AdminDashboardPage() {
           status: "approved",
           is_verified: true
         })
-        .eq("id", userId);
+        .eq("id", user.id);
         
       if (error) throw error;
+      
+      // Send Approval Email
+      await fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve', email: user.email, name: user.name || 'User' }),
+      });
+
       fetchPendingUsers();
     } catch (err) {
       console.error("Failed to approve user");
+    }
+  };
+
+  const handleReject = async (user: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (!window.confirm("Are you sure you want to reject this user?")) return;
+    
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({
+          status: "rejected",
+          is_verified: false
+        })
+        .eq("id", user.id);
+        
+      if (error) throw error;
+      
+      // Send Rejection Email
+      await fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject', email: user.email, name: user.name || 'User' }),
+      });
+
+      fetchPendingUsers();
+    } catch (err) {
+      console.error("Failed to reject user");
     }
   };
 
@@ -198,8 +233,9 @@ export default function AdminDashboardPage() {
                         </div>
                       </td>
                       <td>
-                        <div className="action-cell">
-                          <button className="btn-review" onClick={() => handleApprove(u.id)}>Approve</button>
+                        <div className="action-cell" style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="btn-review" onClick={() => handleApprove(u)} style={{ padding: '0.25rem 0.75rem' }}>Approve</button>
+                          <button className="btn-review" onClick={() => handleReject(u)} style={{ padding: '0.25rem 0.75rem', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' }}>Reject</button>
                         </div>
                       </td>
                     </tr>

@@ -1,6 +1,38 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 import "./system.css";
 
 export default function SystemDashboardPage() {
+  const [dbStatus, setDbStatus] = useState<"checking" | "connected" | "error">("checking");
+  const [latency, setLatency] = useState<number | null>(null);
+
+  useEffect(() => {
+    const checkConnection = async () => {
+      const start = Date.now();
+      try {
+        // Try a simple health check query
+        const { error } = await supabase.from("users").select("id").limit(1);
+        
+        const end = Date.now();
+        setLatency(end - start);
+
+        if (error) {
+          console.error("DB Connection Error:", error);
+          setDbStatus("error");
+        } else {
+          setDbStatus("connected");
+        }
+      } catch (err) {
+        console.error("Unexpected Error:", err);
+        setDbStatus("error");
+      }
+    };
+
+    checkConnection();
+  }, []);
+
   return (
     <div className="system-content">
       <div className="stats-grid">
@@ -22,20 +54,20 @@ export default function SystemDashboardPage() {
           </svg>
         </div>
 
-        <div className="stat-card stat-card-dark">
+        <div className={`stat-card ${dbStatus === 'error' ? 'stat-card-danger' : 'stat-card-dark'}`}>
           <div className="stat-dark-header">
-            <span>System Status</span>
+            <span>Database Status</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ width: 30, height: 12, backgroundColor: '#334155', borderRadius: 2 }}></div>
-              <div style={{ width: 30, height: 12, backgroundColor: '#334155', borderRadius: 2 }}></div>
+              <div style={{ width: 30, height: 12, backgroundColor: dbStatus === 'connected' ? '#059669' : '#334155', borderRadius: 2 }}></div>
+              <div style={{ width: 30, height: 12, backgroundColor: dbStatus === 'error' ? '#dc2626' : '#334155', borderRadius: 2 }}></div>
             </div>
           </div>
           <div className="system-status">
-            <div className="status-dot-large"></div>
-            Operational
+            <div className={`status-dot-large ${dbStatus}`}></div>
+            {dbStatus === "checking" ? "Checking..." : dbStatus === "connected" ? "Operational" : "Disconnected"}
           </div>
           <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '1rem' }}>
-            All services running optimally. Latency: 42ms
+            {dbStatus === "connected" ? `Supabase connection verified. Latency: ${latency}ms` : dbStatus === "error" ? "Failed to connect to Supabase. Check .env keys." : "Establishing secure link..."}
           </div>
         </div>
       </div>
@@ -88,35 +120,6 @@ export default function SystemDashboardPage() {
                   <button style={{ border: 'none', backgroundColor: 'transparent', fontWeight: 600, color: '#0f172a', cursor: 'pointer' }}>Review</button>
                 </td>
               </tr>
-
-              <tr>
-                <td style={{ padding: '1.25rem 0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ width: 36, height: 36, backgroundColor: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>MR</div>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Maria Rodriguez</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>USR-9182-B</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '0.2rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <span style={{ width: 6, height: 6, backgroundColor: '#475569', borderRadius: '50%' }}></span>
-                    Pending
-                  </span>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: 50, height: 4, backgroundColor: '#e2e8f0', borderRadius: 2 }}>
-                      <div style={{ width: '30%', height: '100%', backgroundColor: '#64748b', borderRadius: 2 }}></div>
-                    </div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>30</span>
-                  </div>
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <button style={{ border: 'none', backgroundColor: 'transparent', fontWeight: 600, color: '#0f172a', cursor: 'pointer' }}>Review</button>
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -140,22 +143,9 @@ export default function SystemDashboardPage() {
               </svg>
             </div>
             <div className="log-content">
-              <h4>API Latency Spike Detected</h4>
-              <p>Payment gateway endpoint responding {'>'} 500ms.</p>
-              <span className="log-time">10:42 AM</span>
-            </div>
-          </div>
-
-          <div className="log-item">
-            <div className="log-icon info">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-            </div>
-            <div className="log-content">
-              <h4>New Admin Login</h4>
-              <p>IP: 192.168.1.45 (Unknown Device)</p>
-              <span className="log-time">09:15 AM</span>
+              <h4>Database Check</h4>
+              <p>{dbStatus === 'connected' ? 'Connection to Supabase project ejbjtmxalzenqwlnubfa established.' : dbStatus === 'error' ? 'Connection failed. Verify Supabase project status.' : 'Verifying link...'}</p>
+              <span className="log-time">Real-time</span>
             </div>
           </div>
         </div>

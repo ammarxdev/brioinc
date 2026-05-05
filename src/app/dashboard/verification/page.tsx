@@ -1,30 +1,65 @@
+"use client";
+
 import Image from "next/image";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function VerificationPage() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="page-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+  }
+
   return (
     <div className="page-content">
-      <h1 className="page-title">Identity Verification</h1>
+      <h1 className="page-title">Account Status</h1>
       <p className="page-subtitle">
-        Please complete the KYC process to unlock full account features and higher transaction limits.
+        {user?.status === 'pending' 
+          ? "Your account is currently under review by our administration team."
+          : user?.status === 'rejected'
+          ? "Your account application has been declined. Please contact support for more details."
+          : "Please complete the KYC process to unlock full account features."}
       </p>
 
-      {/* Alert Banner */}
-      <div className="alert-banner">
+      {/* Status Banner */}
+      <div className={`alert-banner ${user?.status === 'rejected' ? 'rejected' : ''}`} style={{ 
+        backgroundColor: user?.status === 'rejected' ? '#fee2e2' : '#f0f9ff',
+        borderColor: user?.status === 'rejected' ? '#fecaca' : '#bae6fd'
+      }}>
         <div className="alert-content">
-          <div className="alert-icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
+          <div className="alert-icon-box" style={{ 
+            backgroundColor: user?.status === 'rejected' ? '#ef4444' : '#0ea5e9'
+          }}>
+            {user?.status === 'rejected' ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            )}
           </div>
           <div className="alert-text">
-            <h3>Verification in Progress</h3>
-            <p>Your documents are currently being reviewed by our security team.</p>
+            <h3 style={{ color: user?.status === 'rejected' ? '#991b1b' : '#0369a1' }}>
+              {user?.status === 'pending' ? "Approval Pending" : user?.status === 'rejected' ? "Account Rejected" : "In Progress"}
+            </h3>
+            <p style={{ color: user?.status === 'rejected' ? '#b91c1c' : '#075985' }}>
+              {user?.status === 'pending' 
+                ? "Our security team is reviewing your details. This usually takes 24-48 hours." 
+                : user?.status === 'rejected'
+                ? "Your application did not meet our current requirements."
+                : "Your documents are currently being reviewed."}
+            </p>
           </div>
         </div>
-        <div className="badge badge-outline">
-          <div className="badge-dot"></div>
-          PENDING REVIEW
+        <div className="badge badge-outline" style={{ 
+          borderColor: user?.status === 'rejected' ? '#ef4444' : '#0ea5e9',
+          color: user?.status === 'rejected' ? '#ef4444' : '#0ea5e9'
+        }}>
+          <div className="badge-dot" style={{ backgroundColor: user?.status === 'rejected' ? '#ef4444' : '#0ea5e9' }}></div>
+          {user?.status?.toUpperCase() || 'UNKNOWN'}
         </div>
       </div>
 
@@ -35,16 +70,16 @@ export default function VerificationPage() {
           {/* Completion Status */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">Completion Status</span>
+              <span className="card-title">Profile Progress</span>
             </div>
             
             <div className="progress-meta">
-              <span>3 of 4 steps completed</span>
-              <h2>75%</h2>
+              <span>{user?.status === 'approved' ? '4 of 4' : '3 of 4'} steps completed</span>
+              <h2>{user?.status === 'approved' ? '100%' : '75%'}</h2>
             </div>
             
             <div className="progress-bar-bg">
-              <div className="progress-bar-fill" style={{ width: '75%' }}></div>
+              <div className="progress-bar-fill" style={{ width: user?.status === 'approved' ? '100%' : '75%' }}></div>
             </div>
 
             <div className="steps-container">
@@ -73,8 +108,14 @@ export default function VerificationPage() {
                 <span className="step-label">Face</span>
               </div>
               <div className="step-item">
-                <div className="step-icon pending">4</div>
-                <span className="step-label" style={{ color: '#9ca3af' }}>Address</span>
+                <div className={`step-icon ${user?.status === 'approved' ? 'completed' : 'pending'}`}>
+                  {user?.status === 'approved' ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : "4"}
+                </div>
+                <span className="step-label" style={{ color: user?.status === 'approved' ? 'inherit' : '#9ca3af' }}>Admin Approval</span>
               </div>
             </div>
           </div>
@@ -166,32 +207,31 @@ export default function VerificationPage() {
 
           {/* Proof of Address */}
           <div className="card id-section" style={{ padding: '2rem 1.5rem' }}>
-            <div className="alert-badge">!</div>
+            <div className="alert-badge" style={{ backgroundColor: user?.status === 'rejected' ? '#ef4444' : '#f59e0b' }}>
+              {user?.status === 'rejected' ? '!' : '!'}
+            </div>
             <div className="card-header" style={{ marginBottom: '0.5rem' }}>
               <span className="card-title">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                Proof of Address
+                Support Contact
               </span>
             </div>
-            <p style={{ fontSize: '0.8rem', marginBottom: '1.5rem' }}>Utility bill or bank statement (Under 3 months old)</p>
+            <p style={{ fontSize: '0.8rem', marginBottom: '1.5rem' }}>
+              {user?.status === 'rejected' 
+                ? "Your application was rejected. Please contact support for clarification." 
+                : "Need help? Our support team is available 24/7."}
+            </p>
 
-            <div className="drag-drop-area">
-              <div className="drag-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-              </div>
-              <p>Click to upload or drag & drop</p>
-              <small>PDF, JPG, PNG (Max 5MB)</small>
+            <div className="drag-drop-area" style={{ borderStyle: 'solid', backgroundColor: '#f8fafc' }}>
+              <p style={{ fontWeight: 600 }}>support@brioinc.net</p>
+              <small>Click to copy email</small>
             </div>
 
-            <button className="btn-upload" disabled>
-              Submit Address Proof
+            <button className="btn-upload" style={{ backgroundColor: user?.status === 'rejected' ? '#dc2626' : '#0f172a' }}>
+              {user?.status === 'rejected' ? 'Appeal Rejection' : 'Contact Support'}
             </button>
           </div>
         </div>

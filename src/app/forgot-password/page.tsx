@@ -1,31 +1,33 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setMessage("");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
       if (error) throw error;
-      router.push("/dashboard");
+      setMessage("Check your email for the password reset link.");
     } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      setError(err.message || "Invalid email or password.");
+      setError(err.message || "Failed to send reset email.");
     } finally {
       setLoading(false);
     }
@@ -34,7 +36,7 @@ export default function LoginPage() {
   return (
     <div className="landing-container">
       <div className="bg-container">
-        <Image src="/bio-bg.png" alt="BG" fill style={{ objectFit: 'cover', transform: 'scale(1.05)' }} priority />
+        <Image src="/finance-bg.png" alt="BG" fill style={{ objectFit: 'cover', transform: 'scale(1.05)' }} priority />
         <div className="bg-overlay"></div>
       </div>
 
@@ -50,31 +52,24 @@ export default function LoginPage() {
 
       <main className="form-page-main">
         <div className="login-glass-card">
-          <h1>Welcome back</h1>
-          <p className="subtitle">Log in to manage your institutional capital.</p>
+          <h1>Reset password</h1>
+          <p className="subtitle">Enter your email and we'll send you a link to reset your password.</p>
 
           {error && <div className="error-alert">{error}</div>}
+          {message && <div className="success-alert">{message}</div>}
 
-          <form onSubmit={handleLogin} className="login-form">
+          <form onSubmit={handleReset} className="login-form">
             <div className="form-group">
               <label>Email Address</label>
               <input type="email" placeholder="name@company.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
 
-            <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label>Password</label>
-                <Link href="/forgot-password" style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'none' }}>Forgot?</Link>
-              </div>
-              <input type="password" placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
-
             <button type="submit" className="submit-btn" disabled={loading}>
-              {loading ? "Signing In..." : "Sign In"}
+              {loading ? "Sending..." : "Send Reset Link"}
             </button>
 
             <p className="bottom-link">
-              New to Brioinc? <Link href="/signup">Create account</Link>
+              Remember your password? <Link href="/login">Sign in</Link>
             </p>
           </form>
         </div>
@@ -96,10 +91,11 @@ export default function LoginPage() {
         .subtitle { color: #94a3b8; margin-bottom: 2.5rem; }
         
         .error-alert { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem; font-size: 0.9rem; }
+        .success-alert { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #4ade80; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem; font-size: 0.9rem; }
 
         .form-group { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
         label { font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
-        input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 1.25rem; border-radius: 1.25rem; color: white; font-size: 1rem; }
+        input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 1.25rem; border-radius: 1.25rem; color: white; font-size: 1rem; width: 100%; }
         input:focus { outline: none; border-color: white; background: rgba(255, 255, 255, 0.1); }
 
         .submit-btn { background: white; color: black; border: none; border-radius: 100px; padding: 1.25rem; width: 100%; font-weight: 800; cursor: pointer; font-size: 1rem; margin-top: 1.5rem; transition: all 0.3s; }

@@ -1,224 +1,151 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
-export default function Home() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      // 1. Create user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError) throw authError;
-
-      const user = authData.user;
-      
-      if (user) {
-        // 2. Save additional details in Supabase database
-        const { error: dbError } = await supabase
-          .from("users")
-          .insert([
-            {
-              id: user.id,
-              name,
-              email,
-              status: "pending",
-              is_verified: false,
-              role: "user"
-            }
-          ]);
-          
-        if (dbError) throw dbError;
-      }
-
-      // Redirect to verification dashboard
-      router.push("/dashboard/verification");
-    } catch (err: any) {
-      setError(err.message || "Failed to create account.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+export default function LandingPage() {
   return (
-    <main className="layout-container">
-      {/* Left Panel - Form */}
-      <section className="left-panel">
-        <div className="brand-header">
-          <svg className="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
-          <span>Brioinc</span>
-        </div>
-
-        <div className="form-wrapper">
-          <h1>Create your account</h1>
-          <p className="subtitle">
-            Join thousands of global entrepreneurs managing their capital with institutional precision.
-          </p>
-
-          {error && <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.85rem' }}>{error}</div>}
-
-          <form onSubmit={handleRegister}>
-            <div className="form-group">
-              <label className="form-label">Full Name</label>
-              <div className="input-wrapper">
-                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-                <input type="text" className="form-input" placeholder="e.g. Jane Doe" required value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Email Address</label>
-              <div className="input-wrapper">
-                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
-                </svg>
-                <input type="email" className="form-input" placeholder="name@company.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <div className="input-wrapper">
-                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
-                <input type="password" className="form-input" placeholder="••••••••" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
-                <svg className="input-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </div>
-            </div>
-
-            <div className="verification-block">
-              <label className="form-label">Phone Verification</label>
-              
-              <div className="verification-row">
-                <div className="select-wrapper">
-                  <select defaultValue="+92">
-                    <option value="+92">+92 (PK)</option>
-                    <option value="+1">+1 (US)</option>
-                    <option value="+44">+44 (UK)</option>
-                    <option value="+91">+91 (IN)</option>
-                  </select>
-                  <svg className="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
-                <input type="tel" className="phone-input" placeholder="(555) 000-0000" />
-              </div>
-
-              <div className="otp-row">
-                <button type="button" className="btn-otp">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    <line x1="9" y1="10" x2="15" y2="10" />
-                    <line x1="12" y1="7" x2="12" y2="13" />
-                  </svg>
-                  Send OTP
-                </button>
-                <div className="otp-inputs">
-                  <input type="text" className="otp-char" maxLength={1} defaultValue="4" />
-                  <input type="text" className="otp-char" maxLength={1} defaultValue="8" />
-                  <input type="text" className="otp-char" maxLength={1} />
-                  <input type="text" className="otp-char" maxLength={1} />
-                </div>
-              </div>
-            </div>
-
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? "Creating Account..." : "Create Account"}
-              {!loading && (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              )}
-            </button>
-
-            <p className="terms-text">
-              By creating an account, you agree to our <strong>Terms of Service</strong> & <strong>Privacy Policy</strong>.
-            </p>
-          </form>
-        </div>
-
-        <div className="login-link">
-          Already have an account? <a href="/login">Sign in 
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-              <polyline points="10 17 15 12 10 7" />
-              <line x1="15" y1="12" x2="3" y2="12" />
-            </svg>
-          </a>
-        </div>
-      </section>
-
-      {/* Right Panel - Visual */}
-      <section className="right-panel">
+    <div className="landing-container">
+      {/* Financial Background Image Layer */}
+      <div className="bg-container">
         <Image 
-          src="/tech-network.png" 
-          alt="Abstract Data Network" 
-          width={600} 
-          height={600} 
-          className="hero-graphic"
+          src="/finance_crypto_bg_1777990108170.png" 
+          alt="Financial Connectivity Background" 
+          fill 
+          style={{ objectFit: 'cover', transform: 'scale(1.1)' }} 
           priority
         />
-        
-        <div className="right-content">
-          <h2>Frictionless capital.</h2>
-          <p>
-            Experience the stoic reliability of traditional banking combined with the high-velocity infrastructure of modern software.
-          </p>
+        <div className="bg-overlay"></div>
+      </div>
 
-          <div className="badges-container">
-            <div className="badge badge-success">
-              <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
-              BANK-GRADE SECURITY
-            </div>
-            <div className="badge">
-              <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
-              GLOBAL REACH
-            </div>
-            <div className="badge">
-              <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-              </svg>
-              INSTANT SETTLEMENT
-            </div>
-          </div>
+      <Navbar />
+
+      <div className="logo-container">
+        <svg className="logo-icon" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+        <span className="logo-text">Brioinc</span>
+      </div>
+
+      <main className="hero-main">
+        <div className="hero-content">
+          <h1>Global Fiat to Binance.<br />Instant & Secure.</h1>
         </div>
-      </section>
-    </main>
+
+        <div className="bottom-bar">
+          <div className="subtext">
+            <p>The ultimate bridge for your capital. Deposit global fiat currencies <br />and watch them arrive in your Binance wallet with institutional speed.</p>
+            <p className="company-name-bottom">Brioinc x Binance</p>
+          </div>
+
+          <Link href="/signup" className="discover-btn">
+            START YOUR CONVERSION
+            <span className="btn-icon-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </span>
+          </Link>
+        </div>
+      </main>
+
+      <Footer />
+
+      <style jsx>{`
+        .landing-container {
+          min-height: 100vh;
+          width: 100%;
+          position: relative;
+          color: white;
+          background: #000;
+          overflow-x: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        .bg-container {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          z-index: -2;
+        }
+        .bg-overlay {
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: 
+            linear-gradient(to bottom, #000 0%, transparent 15%, transparent 85%, #000 100%),
+            linear-gradient(to right, #000 0%, transparent 15%, transparent 85%, #000 100%),
+            radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.6) 70%, #000 100%);
+          box-shadow: inset 0 0 150px 50px #000;
+          z-index: 1;
+        }
+        .logo-container {
+          position: absolute;
+          top: 40px; left: 40px;
+          display: flex; align-items: center; gap: 12px;
+          z-index: 10;
+        }
+        .logo-icon { width: 32px; height: 32px; }
+        .logo-text { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.04em; }
+
+        .hero-main {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding: 0 80px;
+          max-width: 1600px;
+          margin: 0 auto;
+          width: 100%;
+          position: relative;
+          z-index: 5;
+        }
+        .hero-content h1 {
+          font-size: clamp(2.5rem, 8vw, 8rem);
+          line-height: 0.95;
+          font-weight: 700;
+          letter-spacing: -0.05em;
+          margin-bottom: 2rem;
+        }
+        .bottom-bar {
+          position: absolute;
+          bottom: 60px; left: 80px; right: 80px;
+          display: flex; justify-content: space-between; align-items: flex-end;
+        }
+        .subtext p { font-size: 1.1rem; line-height: 1.4; opacity: 0.8; margin-bottom: 0.5rem; max-width: 500px; }
+        .company-name-bottom { font-weight: 800; font-size: 1.4rem !important; opacity: 1 !important; margin-top: 1.5rem; }
+
+        .discover-btn {
+          background: #000;
+          color: #fff !important;
+          padding: 10px 10px 10px 28px;
+          border-radius: 100px;
+          text-decoration: none !important;
+          font-size: 0.75rem;
+          font-weight: 700;
+          display: flex; align-items: center; gap: 1.5rem;
+          transition: all 0.3s ease;
+          border: 1px solid rgba(255,255,255,0.2);
+        }
+        .discover-btn:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.4); }
+        .btn-icon-circle { background: #4d5d4d; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .btn-icon-circle svg { width: 18px; height: 18px; }
+
+        @media (max-width: 1024px) {
+          .hero-main { padding: 0 40px; }
+          .bottom-bar { left: 40px; right: 40px; bottom: 40px; }
+        }
+        @media (max-width: 768px) {
+          .hero-main { padding: 100px 24px 60px; justify-content: flex-start; }
+          .hero-content h1 { font-size: 3.2rem; margin-top: 40px; }
+          .bottom-bar { position: relative; bottom: 0; left: 0; right: 0; flex-direction: column; align-items: flex-start; gap: 2.5rem; margin-top: 4rem; }
+          .subtext p { font-size: 1rem; }
+          .logo-container { top: 24px; left: 24px; }
+          .logo-text { font-size: 1.4rem; }
+        }
+      `}</style>
+    </div>
   );
 }
