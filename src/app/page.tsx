@@ -11,7 +11,7 @@ export default function LandingPage() {
       {/* Financial Background Image Layer */}
       <div className="bg-container">
         <Image 
-          src="/finance_crypto_bg_1777990108170.png" 
+          src="/finance-bg.png" 
           alt="Financial Connectivity Background" 
           fill 
           style={{ objectFit: 'cover', transform: 'scale(1.1)' }} 
@@ -58,7 +58,7 @@ export default function LandingPage() {
       <style jsx>{`
         .landing-container {
           min-height: 100vh;
-          width: 100%;
+          width: 100vw;
           position: relative;
           color: white;
           background: #000;
@@ -94,13 +94,14 @@ export default function LandingPage() {
           flex: 1;
           display: flex;
           flex-direction: column;
-          justify-content: center;
-          padding: 0 80px;
+          justify-content: flex-start;
+          padding: 140px 80px 0;
           max-width: 1600px;
           margin: 0 auto;
           width: 100%;
           position: relative;
           z-index: 5;
+          min-height: 100vh;
         }
         .hero-content h1 {
           font-size: clamp(2.5rem, 8vw, 8rem);
@@ -108,11 +109,14 @@ export default function LandingPage() {
           font-weight: 700;
           letter-spacing: -0.05em;
           margin-bottom: 2rem;
+          overflow-wrap: anywhere;
         }
         .bottom-bar {
-          position: absolute;
-          bottom: 60px; left: 80px; right: 80px;
-          display: flex; justify-content: space-between; align-items: flex-end;
+          margin-top: auto;
+          padding: 0 0 60px;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
         }
         .subtext p { font-size: 1.1rem; line-height: 1.4; opacity: 0.8; margin-bottom: 0.5rem; max-width: 500px; }
         .company-name-bottom { font-weight: 800; font-size: 1.4rem !important; opacity: 1 !important; margin-top: 1.5rem; }
@@ -133,17 +137,127 @@ export default function LandingPage() {
         .btn-icon-circle { background: #4d5d4d; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         .btn-icon-circle svg { width: 18px; height: 18px; }
 
+        @media (max-width: 1200px) {
+          .landing-container { width: 100vw !important; }
+          .hero-main { padding: 130px 60px 0 !important; max-width: 1200px !important; }
+          .hero-content h1 { font-size: clamp(2.5rem, 6vw, 6rem) !important; }
+        }
         @media (max-width: 1024px) {
-          .hero-main { padding: 0 40px; }
-          .bottom-bar { left: 40px; right: 40px; bottom: 40px; }
+          .landing-container { width: 100vw !important; }
+          .hero-main { padding: 120px 40px 0 !important; }
+          .bottom-bar { padding-bottom: 40px !important; }
+          .hero-content h1 { font-size: clamp(2.5rem, 5vw, 5rem) !important; }
         }
         @media (max-width: 768px) {
-          .hero-main { padding: 100px 24px 60px; justify-content: flex-start; }
-          .hero-content h1 { font-size: 3.2rem; margin-top: 40px; }
-          .bottom-bar { position: relative; bottom: 0; left: 0; right: 0; flex-direction: column; align-items: flex-start; gap: 2.5rem; margin-top: 4rem; }
-          .subtext p { font-size: 1rem; }
-          .logo-container { top: 24px; left: 24px; }
-          .logo-text { font-size: 1.4rem; }
+          .landing-container { width: 100vw !important; }
+          .hero-main { 
+            padding: 110px 20px 80px !important; 
+            justify-content: flex-start !important; 
+            min-height: 100vh !important;
+          }
+          .hero-content h1 { 
+            font-size: clamp(1.8rem, 9vw, 3.2rem) !important; 
+            line-height: 1.05 !important;
+            margin-top: 0 !important;
+            margin-bottom: 2rem !important;
+            max-width: 100% !important;
+          }
+          .bottom-bar { 
+            position: relative !important; 
+            bottom: 0 !important; 
+            left: 0 !important; 
+            right: 0 !important; 
+            flex-direction: column !important; 
+            align-items: flex-start !important; 
+            gap: 2.5rem !important; 
+            margin-top: 4rem !important;
+            padding: 0 20px !important;
+          }
+          .subtext p { 
+            font-size: 0.95rem !important; 
+            line-height: 1.6 !important;
+            max-width: 100% !important;
+            margin-bottom: 0.8rem !important;
+          }
+          .subtext p br { display: none !important; }
+          .company-name-bottom { 
+            font-size: 1.2rem !important; 
+            margin-top: 1.5rem !important;
+          }
+          .logo-container { 
+            top: 20px !important; 
+            left: 20px !important; 
+          }
+          .logo-text { 
+            font-size: 1.3rem !important; 
+          }
+          .logo-icon { 
+            width: 28px !important; 
+            height: 28px !important; 
+          }
+          .discover-btn {
+            font-size: 0.7rem !important;
+            padding: 10px 10px 10px 20px !important;
+            min-width: auto !important;
+            align-self: flex-start !important;
+          }
+          .btn-icon-circle { 
+            width: 36px !important; 
+            height: 36px !important; 
+          }
+          .btn-icon-circle svg { 
+            width: 16px !important; 
+            height: 16px !important; 
+          }
+        }
+        @media (max-width: 480px) {
+          .landing-container { width: 100vw !important; }
+          .hero-main {
+            padding: 100px 16px 60px !important;
+          }
+          .hero-content h1 {
+            font-size: clamp(1.6rem, 11vw, 2.6rem) !important;
+            line-height: 1.1 !important;
+            margin-top: 0 !important;
+            margin-bottom: 1.5rem !important;
+          }
+          .bottom-bar {
+            margin-top: 3rem !important;
+            gap: 2rem !important;
+          }
+          .subtext p {
+            font-size: 0.9rem !important;
+            line-height: 1.5 !important;
+            margin-bottom: 0.6rem !important;
+          }
+          .company-name-bottom {
+            font-size: 1.1rem !important;
+            margin-top: 1.2rem !important;
+          }
+          .logo-container {
+            top: 16px !important;
+            left: 16px !important;
+          }
+          .logo-text {
+            font-size: 1.2rem !important;
+          }
+          .logo-icon {
+            width: 24px !important;
+            height: 24px !important;
+          }
+          .discover-btn {
+            font-size: 0.65rem !important;
+            padding: 8px 8px 8px 16px !important;
+            min-width: auto !important;
+          }
+          .btn-icon-circle {
+            width: 32px !important;
+            height: 32px !important;
+          }
+          .btn-icon-circle svg {
+            width: 14px !important;
+            height: 14px !important;
+          }
         }
       `}</style>
     </div>

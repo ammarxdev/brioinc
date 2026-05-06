@@ -28,6 +28,14 @@ export default function TermsPage() {
           <p className="subtitle">Effective Date: May 5, 2026</p>
 
           <section className="story-section">
+            <h2>Introduction</h2>
+            <p>
+              These Terms of Service govern your access to and use of Brioinc’s website and services. By creating an account or using
+              the service, you agree to be bound by these Terms. If you do not agree, you must not use the service.
+            </p>
+          </section>
+
+          <section className="story-section">
             <h2>1. Binance Wallet Authorization</h2>
             <p>
               By using Brioinc, you authorize us to facilitate the transfer of your deposited fiat funds into your specified Binance wallet. 
@@ -43,9 +51,72 @@ export default function TermsPage() {
           </section>
 
           <section className="story-section">
+            <h2>Account Eligibility</h2>
+            <p>
+              You must be legally capable of entering into a binding agreement and comply with all applicable laws in your jurisdiction.
+              We may refuse access, suspend, or terminate accounts that fail verification or are suspected of fraud, misuse, or unlawful activity.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Fees and Pricing</h2>
+            <p>
+              Fees (if applicable) may be displayed before you confirm a transaction. Fees can vary depending on payment rails,
+              settlement method, and compliance requirements. You are responsible for any bank fees, intermediary fees, or third-party charges.
+            </p>
+          </section>
+
+          <section className="story-section">
             <h2>3. Transaction Finality</h2>
             <p>
               Once a conversion to Binance is initiated and confirmed on the blockchain or internal ledger, the transaction is final and cannot be reversed. Users should verify all details before confirming their conversion.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Prohibited Use</h2>
+            <p>
+              You agree not to use the service for unlawful activity, money laundering, sanctions violations, fraud, or attempts to
+              compromise the security of the platform. You may not reverse engineer, scrape, or interfere with service operation.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Service Availability</h2>
+            <p>
+              We may modify, suspend, or discontinue any part of the service at any time, including for maintenance,
+              security, compliance, or operational reasons.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Disclaimers</h2>
+            <p>
+              The service is provided on an “as is” and “as available” basis. Brioinc does not guarantee uninterrupted availability,
+              error-free operation, or that transfers will be completed within any specific timeframe.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Limitation of Liability</h2>
+            <p>
+              To the maximum extent permitted by law, Brioinc will not be liable for indirect, incidental, special, consequential,
+              or punitive damages, or any loss of profits, data, or goodwill arising from or related to your use of the service.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Termination</h2>
+            <p>
+              We may suspend or terminate your access to the service at any time if we believe you have violated these Terms,
+              failed verification, or created risk for Brioinc, our partners, or other users.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Contact</h2>
+            <p>
+              For questions about these Terms, contact support@brioinc.net.
             </p>
           </section>
         </div>

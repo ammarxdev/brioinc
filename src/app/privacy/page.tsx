@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <div className="landing-container">
       <div className="bg-container">
-        <Image src="/finance_crypto_bg_1777990108170.png" alt="BG" fill style={{ objectFit: 'cover', transform: 'scale(1.05)' }} priority />
+        <Image src="/finance-bg.png" alt="BG" fill style={{ objectFit: 'cover', transform: 'scale(1.05)' }} priority />
         <div className="bg-overlay"></div>
       </div>
 
@@ -28,9 +28,37 @@ export default function PrivacyPage() {
           <p className="subtitle">Last Updated: May 5, 2026</p>
 
           <section className="story-section">
+            <h2>Overview</h2>
+            <p>
+              This Privacy Policy explains how Brioinc collects, uses, discloses, and protects information when you access our
+              website and services. Brioinc provides an institutional bridge for fiat-to-digital asset conversion workflows.
+              By using Brioinc, you acknowledge that you have read and understood this Privacy Policy.
+            </p>
+          </section>
+
+          <section className="story-section">
             <h2>Data Collection</h2>
             <p>
               We collect information necessary to facilitate your fiat-to-Binance conversions, including identity verification documents, bank details, and Binance wallet addresses. Your data is encrypted and stored in institutional-grade vaults.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Information We Collect</h2>
+            <p>
+              Depending on how you use Brioinc, we may collect:
+              Account details (name, email, phone), identity and verification data (KYC/AML documents and checks),
+              transaction information (amounts, timestamps, status), payment and banking details required for settlement,
+              and technical data such as device identifiers, approximate location, IP address, and log data.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>How We Use Your Information</h2>
+            <p>
+              We use collected information to operate and improve the service, verify identity and prevent fraud,
+              process transactions and provide customer support, enforce our Terms of Service, comply with legal obligations,
+              and communicate important service notifications.
             </p>
           </section>
 
@@ -42,9 +70,53 @@ export default function PrivacyPage() {
           </section>
 
           <section className="story-section">
+            <h2>Legal Basis</h2>
+            <p>
+              Where required by law, Brioinc processes personal data based on one or more of the following legal bases:
+              performance of a contract, legitimate interests such as security and fraud prevention, compliance with legal obligations,
+              and your consent where applicable.
+            </p>
+          </section>
+
+          <section className="story-section">
             <h2>Compliance</h2>
             <p>
               Your data is handled in strict accordance with global privacy standards (GDPR, CCPA) to ensure that your financial journey remains private and secure.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Data Retention</h2>
+            <p>
+              We retain personal data only for as long as necessary to provide our services, comply with regulatory and
+              recordkeeping obligations, resolve disputes, and enforce agreements. Retention periods may vary depending on
+              the type of data and jurisdiction.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Security</h2>
+            <p>
+              We implement administrative, technical, and physical safeguards designed to protect personal data.
+              No method of transmission or storage is completely secure, and we cannot guarantee absolute security.
+              You are responsible for maintaining the confidentiality of your account credentials.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Your Rights</h2>
+            <p>
+              Depending on your jurisdiction, you may have rights to access, correct, delete, or restrict processing of your personal data,
+              object to certain processing, and request data portability. You may also have the right to withdraw consent where processing is
+              based on consent.
+            </p>
+          </section>
+
+          <section className="story-section">
+            <h2>Contact</h2>
+            <p>
+              If you have questions about this Privacy Policy or would like to exercise your rights, you can contact our support team at
+              support@brioinc.net.
             </p>
           </section>
         </div>

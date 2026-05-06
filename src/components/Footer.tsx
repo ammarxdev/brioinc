@@ -85,13 +85,57 @@ export default function Footer() {
           text-align: center;
         }
 
+        @media (max-width: 1200px) {
+          .footer-container { padding: 70px 60px 40px; }
+          .footer-content { gap: 3rem; }
+          .footer-links-grid { gap: 4rem; }
+        }
         @media (max-width: 1024px) {
           .footer-container { padding: 60px 40px 40px; }
+          .footer-content { gap: 2.5rem; }
           .footer-links-grid { gap: 3rem; }
+          .footer-brand { max-width: 280px; }
         }
         @media (max-width: 768px) {
-          .footer-content { flex-direction: column; gap: 3rem; }
-          .footer-links-grid { flex-wrap: wrap; gap: 3rem; }
+          .footer-container { padding: 50px 24px 30px; }
+          .footer-content { flex-direction: column; gap: 2.5rem; }
+          .footer-links-grid { 
+            flex-wrap: wrap; 
+            gap: 2.5rem; 
+            justify-content: space-between;
+          }
+          .links-column { flex: 1; min-width: 140px; }
+          .footer-brand { max-width: 100%; text-align: center; }
+          .logo-group { justify-content: center; }
+          .brand-desc { text-align: center; max-width: 400px; margin: 0 auto; }
+        }
+        @media (max-width: 480px) {
+          .footer-container { padding: 40px 20px 25px; }
+          .footer-content { gap: 2rem; }
+          .footer-links-grid { 
+            gap: 2rem; 
+            flex-direction: column;
+          }
+          .links-column { 
+            flex: none; 
+            min-width: auto; 
+            text-align: center;
+          }
+          .links-column h4 { 
+            font-size: 0.7rem; 
+            margin-bottom: 1rem; 
+          }
+          .links-column a { 
+            font-size: 0.85rem; 
+          }
+          .footer-bottom { 
+            padding-top: 30px; 
+            font-size: 0.8rem; 
+          }
+          .brand-desc { 
+            font-size: 0.9rem; 
+            max-width: 300px; 
+          }
         }
       `}</style>
     </footer>

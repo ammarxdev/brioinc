@@ -10,22 +10,98 @@ import Footer from "@/components/Footer";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [isOtpSent, setIsOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const router = useRouter();
+
+  const withTimeout = async <T,>(promise: Promise<T>, ms: number, timeoutMessage: string) => {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        setTimeout(() => reject(new Error(timeoutMessage)), ms);
+      }),
+    ]);
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) return;
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+    if (value && index < 5) {
+      const nextInput = document.querySelectorAll('.otp-box')[index + 1] as HTMLInputElement;
+      nextInput?.focus();
+    }
+  };
+
+  const sendOtp = async () => {
+    if (!email) {
+      setError("Please enter your email address first.");
+      return;
+    }
+
+    setOtpLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false,
+        },
+      });
+
+      if (error) throw error;
+      setIsOtpSent(true);
+      setSuccess("Verification code sent to your email.");
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      const message = err?.message || "Failed to send verification code. Please try again.";
+      if (typeof message === "string" && message.toLowerCase().includes("error sending confirmation email")) {
+        setError("Supabase could not send the OTP email. Configure SMTP in your Supabase project (Auth > SMTP) or email OTP sign-in will not work.");
+      } else {
+        setError(message);
+      }
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const enteredOtp = otp.join("");
+      if (!isOtpSent) {
+        throw new Error("Please request a verification code first.");
+      }
+      if (enteredOtp.length !== 6) {
+        throw new Error("Please enter the complete 6-digit verification code.");
+      }
+
+      const { data, error } = await withTimeout(
+        supabase.auth.verifyOtp({
+          email,
+          token: enteredOtp,
+          type: 'email',
+        }),
+        15000,
+        "OTP verification timed out. Please try again."
+      );
       if (error) throw error;
+      if (!data?.session) {
+        throw new Error("OTP verified but no session was created. Check your Supabase email auth settings.");
+      }
       router.push("/dashboard");
     } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      setError(err.message || "Invalid email or password.");
+      setError(err.message || "Failed to sign in.");
     } finally {
       setLoading(false);
     }
@@ -54,6 +130,7 @@ export default function LoginPage() {
           <p className="subtitle">Log in to manage your institutional capital.</p>
 
           {error && <div className="error-alert">{error}</div>}
+          {success && <div className="success-alert">{success}</div>}
 
           <form onSubmit={handleLogin} className="login-form">
             <div className="form-group">
@@ -61,12 +138,19 @@ export default function LoginPage() {
               <input type="email" placeholder="name@company.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
 
-            <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label>Password</label>
-                <Link href="/forgot-password" style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'none' }}>Forgot?</Link>
+            <div className="verification-glass">
+              <label>Security Verification</label>
+              <div className="otp-action-row">
+                <button type="button" className="send-otp-btn" onClick={sendOtp} disabled={otpLoading}>
+                  {otpLoading ? "..." : isOtpSent ? "Resend" : "Send Code"}
+                </button>
+                <Link href="/forgot-password" style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'none' }}>Use password reset</Link>
               </div>
-              <input type="password" placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <div className="otp-inputs">
+                {otp.map((val, i) => (
+                  <input key={i} type="text" maxLength={1} className="otp-box" value={val} onChange={(e) => handleOtpChange(i, e.target.value)} />
+                ))}
+              </div>
             </div>
 
             <button type="submit" className="submit-btn" disabled={loading}>
@@ -96,11 +180,19 @@ export default function LoginPage() {
         .subtitle { color: #94a3b8; margin-bottom: 2.5rem; }
         
         .error-alert { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem; font-size: 0.9rem; }
+        .success-alert { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #4ade80; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem; font-size: 0.9rem; }
 
         .form-group { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
         label { font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
         input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 1.25rem; border-radius: 1.25rem; color: white; font-size: 1rem; }
         input:focus { outline: none; border-color: white; background: rgba(255, 255, 255, 0.1); }
+
+        .verification-glass { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); padding: 1.5rem; border-radius: 1.5rem; margin: 1.5rem 0; }
+        .otp-action-row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; gap: 1rem; }
+        .send-otp-btn { background: white; color: black; border: none; border-radius: 1rem; padding: 0.75rem 1.25rem; font-weight: 700; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+        .send-otp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .otp-inputs { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; }
+        .otp-box { width: 3.25rem; height: 3.25rem; text-align: center; font-weight: 700; font-size: 1.2rem; padding: 0; }
 
         .submit-btn { background: white; color: black; border: none; border-radius: 100px; padding: 1.25rem; width: 100%; font-weight: 800; cursor: pointer; font-size: 1rem; margin-top: 1.5rem; transition: all 0.3s; }
         .submit-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(255,255,255,0.2); }

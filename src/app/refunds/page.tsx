@@ -8,7 +8,7 @@ export default function RefundsPage() {
   return (
     <div className="landing-container">
       <div className="bg-container">
-        <Image src="/finance_crypto_bg_1777990108170.png" alt="BG" fill style={{ objectFit: 'cover', transform: 'scale(1.05)' }} priority />
+        <Image src="/finance-bg.png" alt="BG" fill style={{ objectFit: 'cover', transform: 'scale(1.05)' }} priority />
         <div className="bg-overlay"></div>
       </div>
 

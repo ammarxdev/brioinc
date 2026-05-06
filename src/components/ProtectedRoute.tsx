@@ -9,7 +9,13 @@ export default function ProtectedRoute({ children, requireAdmin = false, require
   const router = useRouter();
   const pathname = usePathname();
 
+  const devBypassAuth =
+    process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true" &&
+    typeof window !== "undefined" &&
+    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+
   useEffect(() => {
+    if (devBypassAuth) return;
     if (!loading) {
       if (!user) {
         router.push("/");
@@ -26,6 +32,8 @@ export default function ProtectedRoute({ children, requireAdmin = false, require
   if (loading) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
   }
+
+  if (devBypassAuth) return <>{children}</>;
 
   if (!user) return null;
   if (requireAdmin && user.role !== "admin") return null;

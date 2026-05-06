@@ -59,9 +59,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from("users")
         .select("*")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
 
-      if (data && !error) {
+      if (error) {
+        console.error("Error fetching user profile", error);
+      }
+
+      if (data) {
         setUser({
           id: userId,
           email: email || null,
@@ -71,7 +75,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           role: data.role || "user",
         });
       } else {
-        // Fallback if profile doesn't exist yet
+        if (email) {
+          const { error: insertError } = await supabase.from("users").insert({
+            id: userId,
+            email,
+            name: null,
+            status: "pending",
+            is_verified: false,
+            role: "user",
+          });
+
+          if (insertError) {
+            console.error("Failed to create user profile row", insertError);
+          }
+        }
+
         setUser({
           id: userId,
           email: email || null,

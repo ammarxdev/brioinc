@@ -10,11 +10,7 @@ import Footer from "@/components/Footer";
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [countryCode, setCountryCode] = useState("+92");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState(["", "", "", ""]);
-  const [generatedOtp, setGeneratedOtp] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,19 +19,32 @@ export default function SignupPage() {
   const [success, setSuccess] = useState("");
   const router = useRouter();
 
+  const withTimeout = async <T,>(promise: Promise<T>, ms: number, timeoutMessage: string) => {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        setTimeout(() => reject(new Error(timeoutMessage)), ms);
+      }),
+    ]);
+  };
+
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) return;
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
     // Auto-focus next input
-    if (value && index < 3) {
+    if (value && index < 5) {
       const nextInput = document.querySelectorAll('.otp-box')[index + 1] as HTMLInputElement;
       nextInput?.focus();
     }
   };
 
   const sendOtp = async () => {
+    if (!name) {
+      setError("Please enter your full name first.");
+      return;
+    }
     if (!email) {
       setError("Please enter your email address first.");
       return;
@@ -43,23 +52,31 @@ export default function SignupPage() {
     setOtpLoading(true);
     setError("");
     setSuccess("");
-    
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(code);
 
     try {
-      const res = await fetch('/api/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'otp', email, otp: code }),
+      setOtp(["", "", "", "", "", ""]);
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+          data: {
+            name,
+          },
+        },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send OTP");
-      
+
+      if (error) throw error;
+
       setIsOtpSent(true);
       setSuccess("Verification code sent to your email.");
     } catch (err: any) {
-      setError(err.message);
+      console.error('OTP sending error:', err);
+      const message = err?.message || "Failed to send verification code. Please try again.";
+      if (typeof message === "string" && message.toLowerCase().includes("error sending confirmation email")) {
+        setError("Supabase could not send the OTP email. Configure SMTP in your Supabase project (Auth > SMTP) or email OTP sign-up will not work.");
+      } else {
+        setError(message);
+      }
     } finally {
       setOtpLoading(false);
     }
@@ -75,30 +92,49 @@ export default function SignupPage() {
       if (!termsAccepted) {
         throw new Error("You must accept the Terms and Conditions.");
       }
-      
-      const enteredOtp = otp.join("");
-      if (enteredOtp !== generatedOtp) {
-        throw new Error("Invalid verification code.");
+
+      if (!name) {
+        throw new Error("Please fill in all required fields.");
       }
 
-      const { error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { name: name, phone: `${countryCode}${phone}` }
-        }
-      });
+      if (!isOtpSent) {
+        throw new Error("Please click Send Code first.");
+      }
 
-      if (authError) throw authError;
+      const enteredOtp = otp.join("");
+      if (enteredOtp.length !== 6) {
+        throw new Error("Please enter the complete 6-digit verification code.");
+      }
 
-      try {
-        await fetch('/api/email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'welcome', email, name }),
-        });
-      } catch (e) {
-        console.error("Welcome email failed", e);
+      // Verify OTP with Supabase
+      const { data: verifyData, error: verifyError } = await withTimeout(
+        supabase.auth.verifyOtp({
+          email,
+          token: enteredOtp,
+          type: 'email',
+        }),
+        15000,
+        "OTP verification timed out. Please try again."
+      );
+
+      if (verifyError) throw verifyError;
+      if (!verifyData?.session) {
+        throw new Error("OTP verified but no session was created. Check your Supabase email auth settings.");
+      }
+
+      // Update user metadata after verification
+      const { error: updateError } = await withTimeout(
+        supabase.auth.updateUser({
+          data: {
+            name: name,
+          },
+        }),
+        15000,
+        "Profile update timed out. Please try again."
+      );
+
+      if (updateError) {
+        console.error("Failed to update user metadata:", updateError);
       }
 
       router.push("/dashboard/verification");
@@ -146,20 +182,9 @@ export default function SignupPage() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Password</label>
-              <input type="password" placeholder="••••••••" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
-
             <div className="verification-glass">
               <label>Security Verification</label>
-              <div className="phone-row">
-                <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)}>
-                  <option value="+92">+92</option>
-                  <option value="+1">+1</option>
-                  <option value="+44">+44</option>
-                </select>
-                <input type="tel" placeholder="(555) 000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <div className="otp-row">
                 <button type="button" className="send-otp-btn" onClick={sendOtp} disabled={otpLoading}>
                   {otpLoading ? "..." : isOtpSent ? "Resend" : "Send Code"}
                 </button>
@@ -176,7 +201,7 @@ export default function SignupPage() {
               <label htmlFor="terms">I accept the <a href="/terms">Terms and Conditions</a></label>
             </div>
 
-            <button type="submit" className="submit-btn" disabled={loading}>
+            <button type="submit" className="submit-btn" disabled={loading || !termsAccepted || !isOtpSent}>
               {loading ? "Processing..." : "Create Account"}
             </button>
           </form>
@@ -214,8 +239,7 @@ export default function SignupPage() {
         input:focus { outline: none; border-color: white; background: rgba(255, 255, 255, 0.1); }
 
         .verification-glass { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); padding: 1.5rem; border-radius: 1.5rem; margin: 2rem 0; }
-        .phone-row { display: flex; gap: 0.75rem; margin-top: 0.75rem; }
-        .phone-row select { width: 100px; }
+        .otp-row { display: flex; gap: 0.75rem; margin-top: 0.75rem; }
         .send-otp-btn { background: white; color: black; border: none; border-radius: 1rem; padding: 0 1.5rem; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
         .send-otp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .otp-inputs { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; }

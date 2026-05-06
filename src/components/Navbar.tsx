@@ -111,20 +111,55 @@ export default function Navbar() {
         .hamburger.active span:first-child { transform: translateY(5px) rotate(45deg); }
         .hamburger.active span:last-child { transform: translateY(-5px) rotate(-45deg); }
 
+        @media (max-width: 1200px) {
+          .navbar-container { right: 30px; top: 25px; }
+          .navbar-pill { gap: 2rem; padding-left: 24px; }
+        }
         @media (max-width: 1024px) {
           .navbar-container { right: 20px; top: 20px; }
           .navbar-pill { gap: 1.5rem; padding-left: 20px; }
         }
-
         @media (max-width: 768px) {
-          .navbar-container { left: 20px; right: 20px; top: 20px; }
-          .navbar-pill { width: 100%; justify-content: space-between; padding: 6px 6px 6px 20px; border-radius: 30px; }
+          .navbar-container { left: 16px; right: 16px; top: 16px; }
+          .navbar-pill { 
+            width: 100%; 
+            justify-content: space-between; 
+            padding: 8px 8px 8px 16px; 
+            border-radius: 24px;
+            min-height: 48px;
+          }
           .nav-links { display: none; }
-          .navbar-pill.expanded { border-radius: 24px; flex-direction: column; align-items: flex-start; padding: 32px 24px; }
-          .navbar-pill.expanded .nav-links { display: flex; flex-direction: column; gap: 2rem; width: 100%; margin-bottom: 2rem; }
-          .navbar-pill.expanded .work-with-btn { width: 100% !important; justify-content: space-between !important; }
+          .navbar-pill.expanded { 
+            border-radius: 20px; 
+            flex-direction: column; 
+            align-items: flex-start; 
+            padding: 24px 20px;
+            min-height: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+          }
+          .navbar-pill.expanded .nav-links { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 1.5rem; 
+            width: 100%; 
+            margin-bottom: 1.5rem; 
+          }
+          .navbar-pill.expanded .work-with-btn { 
+            width: 100% !important; 
+            justify-content: space-between !important; 
+            padding: 12px 20px;
+          }
           .mobile-toggle { display: block; }
-          .navbar-pill.expanded .mobile-toggle { position: absolute; top: 20px; right: 20px; }
+          .navbar-pill.expanded .mobile-toggle { position: absolute; top: 16px; right: 16px; }
+          .navbar-pill a { font-size: 0.8rem; }
+        }
+        @media (max-width: 480px) {
+          .navbar-container { left: 12px; right: 12px; top: 12px; }
+          .navbar-pill { padding: 6px 6px 6px 12px; min-height: 44px; }
+          .navbar-pill.expanded { padding: 20px 16px; border-radius: 16px; }
+          .navbar-pill.expanded .nav-links { gap: 1.2rem; margin-bottom: 1.2rem; }
+          .navbar-pill.expanded .work-with-btn { padding: 10px 16px; }
+          .navbar-pill.expanded .mobile-toggle { top: 12px; right: 12px; }
         }
       `}</style>
     </nav>
