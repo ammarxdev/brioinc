@@ -24,13 +24,20 @@ export async function POST(req: Request) {
     const requestUser = await getRequestUser(req);
     if (!requestUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { cnicFrontPath, cnicBackPath } = await req.json();
+    const { cnicFrontPath, cnicBackPath, selfiePath } = await req.json();
 
     const frontPath = String(cnicFrontPath || "");
     const backPath = String(cnicBackPath || "");
+    const sPath = String(selfiePath || "");
 
-    if (!isValidObjectPath(frontPath, requestUser.id) || !isValidObjectPath(backPath, requestUser.id)) {
+    if (!isValidObjectPath(frontPath, requestUser.id) || !isValidObjectPath(backPath, requestUser.id) || !isValidObjectPath(sPath, requestUser.id)) {
       return NextResponse.json({ error: "Invalid document path" }, { status: 400 });
+    }
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ 
+        error: "Server Configuration Error: SUPABASE_SERVICE_ROLE_KEY is missing from your .env file. Please add it and restart your dev server (npm run dev)." 
+      }, { status: 500 });
     }
 
     const supabase = createSupabaseServiceServerClient();
@@ -42,7 +49,10 @@ export async function POST(req: Request) {
       .eq("is_current", true);
 
     if (clearCurrentErr) {
-      return NextResponse.json({ error: "Failed to submit KYC" }, { status: 500 });
+      console.error("clearCurrentErr:", clearCurrentErr);
+      return NextResponse.json({ 
+        error: `Failed to submit KYC (clear current): ${clearCurrentErr.message || JSON.stringify(clearCurrentErr)}` 
+      }, { status: 500 });
     }
 
     const { data: submission, error: insertErr } = await supabase
@@ -52,6 +62,7 @@ export async function POST(req: Request) {
         status: "pending",
         cnic_front_path: frontPath,
         cnic_back_path: backPath,
+        selfie_path: sPath,
         is_current: true,
         submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -60,7 +71,10 @@ export async function POST(req: Request) {
       .single();
 
     if (insertErr) {
-      return NextResponse.json({ error: "Failed to submit KYC" }, { status: 500 });
+      console.error("insertErr:", insertErr);
+      return NextResponse.json({ 
+        error: `Failed to submit KYC (insert): ${insertErr.message || JSON.stringify(insertErr)}` 
+      }, { status: 500 });
     }
 
     const { error: userUpdateErr } = await supabase
@@ -74,7 +88,10 @@ export async function POST(req: Request) {
       .eq("id", requestUser.id);
 
     if (userUpdateErr) {
-      return NextResponse.json({ error: "Failed to update verification status" }, { status: 500 });
+      console.error("userUpdateErr:", userUpdateErr);
+      return NextResponse.json({ 
+        error: `Failed to update verification status: ${userUpdateErr.message || JSON.stringify(userUpdateErr)}` 
+      }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, submissionId: submission.id });

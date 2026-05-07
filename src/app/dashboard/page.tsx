@@ -117,7 +117,7 @@ export default function OverviewPage() {
 
           <div className="limits-footer">
             <span style={{ color: '#94a3b8' }}>Need higher limits?</span>
-            <a href="/dashboard/verification">Verify ID &gt;</a>
+            <a href="/signup/kyc">Verify ID &gt;</a>
           </div>
         </div>
       </div>

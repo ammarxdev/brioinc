@@ -151,22 +151,20 @@ export async function POST(req: Request) {
       throw invoiceUpdateErr;
     }
 
-    // 5. Trigger Transactional Email notification to Client
+    // 5. Trigger Transactional Email notification to Client (Non-blocking background thread)
     const payPageUrl = `${siteUrl}/invoices/pay/${updatedInvoice.id}`;
     
-    try {
-      await sendInvoiceCreatedEmail({
-        to: clientEmail,
-        clientName: clientName || 'Valued Partner',
-        amount: parseFloat(amount),
-        currency,
-        invoiceNumber,
-        payLink: payPageUrl,
-        checkoutUrl: paymentSetup.invoiceUrl,
-      });
-    } catch (emailErr: any) {
-      console.warn('Invoice alert failed to send, logging issue:', emailErr.message);
-    }
+    sendInvoiceCreatedEmail({
+      to: clientEmail,
+      clientName: clientName || 'Valued Partner',
+      amount: parseFloat(amount),
+      currency,
+      invoiceNumber,
+      payLink: payPageUrl,
+      checkoutUrl: paymentSetup.invoiceUrl,
+    }).catch((emailErr: any) => {
+      console.warn('Invoice alert failed to send in background:', emailErr.message);
+    });
 
     return NextResponse.json({
       success: true,

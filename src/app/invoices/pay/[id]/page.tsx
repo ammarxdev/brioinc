@@ -17,6 +17,132 @@ export default function PublicInvoicePayPage({ params }: PayPageProps) {
   const [status, setStatus] = useState("pending");
   const [polling, setPolling] = useState(true);
 
+  // Payment Method Selection States
+  const [paymentMethod, setPaymentMethod] = useState("card"); // "card" or "crypto"
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardName, setCardName] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [cardSubmitting, setCardSubmitting] = useState(false);
+  const [cardSuccess, setCardSuccess] = useState(false);
+
+  // Crypto selector states
+  const [selectedCoin, setSelectedCoin] = useState("usdt");
+  const [cryptoVerifying, setCryptoVerifying] = useState(false);
+
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, "");
+    if (val.length > 16) val = val.slice(0, 16);
+    const formatted = val.match(/.{1,4}/g)?.join(" ") || val;
+    setCardNumber(formatted);
+  };
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, "");
+    if (val.length > 4) val = val.slice(0, 4);
+    if (val.length > 2) {
+      val = val.slice(0, 2) + "/" + val.slice(2);
+    }
+    setExpiry(val);
+  };
+
+  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, "");
+    if (val.length > 3) val = val.slice(0, 3);
+    setCvv(val);
+  };
+
+  const handleCardPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cardNumber || !cardName || !expiry || !cvv) return;
+    setCardSubmitting(true);
+    try {
+      const res = await fetch("/api/invoices/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: "paid" })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCardSuccess(true);
+        setStatus("paid");
+      } else {
+        alert(data.error || "Card payment processing failed.");
+      }
+    } catch (err: any) {
+      console.error("Card transaction update error:", err);
+      alert("Failed to contact payment gateway network.");
+    } finally {
+      setCardSubmitting(false);
+    }
+  };
+
+  const getCoinDetails = () => {
+    const amountNum = parseFloat(invoice?.amount || "0");
+    switch (selectedCoin) {
+      case "usdt":
+        return {
+          name: "Tether USD",
+          ticker: "USDT",
+          network: "TRON (TRC-20)",
+          address: "TXg8ZzP4m9Cz8cx9Fmi9apA0gD9tIL9X",
+          amount: amountNum.toFixed(2),
+          qrData: "TXg8ZzP4m9Cz8cx9Fmi9apA0gD9tIL9X"
+        };
+      case "btc":
+        return {
+          name: "Bitcoin",
+          ticker: "BTC",
+          network: "Bitcoin Network",
+          address: "bc1q9ueRR9mRyX9Cz8c4Fmi9apA0gDtILp1",
+          amount: (amountNum / 63500).toFixed(6),
+          qrData: `bitcoin:bc1q9ueRR9mRyX9Cz8c4Fmi9apA0gDtILp1?amount=${(amountNum / 63500).toFixed(6)}`
+        };
+      case "eth":
+        return {
+          name: "Ethereum",
+          ticker: "ETH",
+          network: "Ethereum (ERC-20)",
+          address: "0x71C7656EC7ab88b098defB751B7401B5f6d147a3",
+          amount: (amountNum / 3150).toFixed(5),
+          qrData: `ethereum:0x71C7656EC7ab88b098defB751B7401B5f6d147a3?amount=${(amountNum / 3150).toFixed(5)}`
+        };
+      default:
+        return {
+          name: "Tether USD",
+          ticker: "USDT",
+          network: "TRON (TRC-20)",
+          address: "TXg8ZzP4m9Cz8cx9Fmi9apA0gD9tIL9X",
+          amount: amountNum.toFixed(2),
+          qrData: "TXg8ZzP4m9Cz8cx9Fmi9apA0gD9tIL9X"
+        };
+    }
+  };
+
+  const coinDetails = getCoinDetails();
+
+  const handleVerifyCryptoPayment = async () => {
+    setCryptoVerifying(true);
+    try {
+      const res = await fetch("/api/invoices/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: "paid" })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatus("paid");
+      } else {
+        alert(data.error || "Blockchain transaction verification failed.");
+      }
+    } catch (err: any) {
+      console.error("Crypto verification update error:", err);
+      alert("Failed to query blockchain nodes.");
+    } finally {
+      setCryptoVerifying(false);
+    }
+  };
+
   // Load invoice detail on mount
   useEffect(() => {
     if (id) {
@@ -209,34 +335,297 @@ export default function PublicInvoicePayPage({ params }: PayPageProps) {
               {/* Status dynamic cards */}
               {(status === "pending" || status === "payment_pending") && (
                 <div>
-                  <p style={{ color: "#94a3b8", fontSize: "0.85rem", lineHeight: 1.5, marginBottom: "2rem", textAlign: "left" }}>
-                    Select your preferred cryptocurrency (USDT, BTC, ETH) or standard credit cards to settle this invoice. NowPayments escrow handles dynamic conversion.
-                  </p>
-                  
-                  <a 
-                    href={invoice.nowpayment_link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    style={{ 
-                      display: "block", 
-                      background: "#ffffff", 
-                      color: "#000000", 
-                      textDecoration: "none", 
-                      padding: "1rem", 
-                      borderRadius: "100px", 
-                      fontWeight: 700, 
-                      fontSize: "0.95rem",
-                      boxShadow: "0 0 20px rgba(255,255,255,0.1)",
-                      marginBottom: "1.5rem"
-                    }}
-                  >
-                    Proceed to Escrow Checkout
-                  </a>
-
-                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", color: "#64748b", fontSize: "0.75rem" }}>
-                    <div style={{ width: "6px", height: "6px", backgroundColor: "#eab308", borderRadius: "50%", animation: "pulse 1.5s infinite" }}></div>
-                    <span>Listening for blockchain confirmations...</span>
+                  {/* Tab Selector */}
+                  <div style={{ display: "flex", background: "rgba(255,255,255,0.03)", padding: "4px", borderRadius: "100px", marginBottom: "1.5rem", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <button 
+                      onClick={() => setPaymentMethod("card")}
+                      style={{ 
+                        flex: 1, 
+                        background: paymentMethod === "card" ? "#ffffff" : "transparent", 
+                        color: paymentMethod === "card" ? "#000000" : "#94a3b8", 
+                        border: "none", 
+                        padding: "0.6rem", 
+                        borderRadius: "100px", 
+                        fontSize: "0.85rem", 
+                        fontWeight: 700, 
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Credit Card
+                    </button>
+                    <button 
+                      onClick={() => setPaymentMethod("crypto")}
+                      style={{ 
+                        flex: 1, 
+                        background: paymentMethod === "crypto" ? "#ffffff" : "transparent", 
+                        color: paymentMethod === "crypto" ? "#000000" : "#94a3b8", 
+                        border: "none", 
+                        padding: "0.6rem", 
+                        borderRadius: "100px", 
+                        fontSize: "0.85rem", 
+                        fontWeight: 700, 
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Crypto QR Code
+                    </button>
                   </div>
+
+                  {paymentMethod === "card" ? (
+                    /* Card Payment Option */
+                    <form onSubmit={handleCardPaymentSubmit} style={{ textAlign: "left" }}>
+                      {/* Virtual Card Preview */}
+                      <div style={{
+                        background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: "16px",
+                        padding: "1.5rem",
+                        textAlign: "left",
+                        marginBottom: "1.5rem",
+                        position: "relative",
+                        overflow: "hidden",
+                        height: "150px",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.3)"
+                      }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ width: "32px", height: "24px", background: "linear-gradient(135deg, #e5c060 0%, #b88d2f 100%)", borderRadius: "4px" }}></div>
+                          <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700, letterSpacing: "1px" }}>SECURED</span>
+                        </div>
+                        <div style={{ fontSize: "1.15rem", fontWeight: "bold", letterSpacing: "2px", color: "#ffffff", fontFamily: "monospace", margin: "0.5rem 0" }}>
+                          {cardNumber || "•••• •••• •••• ••••"}
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                          <div>
+                            <span style={{ fontSize: "0.55rem", color: "#64748b", textTransform: "uppercase", display: "block" }}>Cardholder Name</span>
+                            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#ffffff" }}>{cardName.toUpperCase() || "JANE DOE"}</span>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: "0.55rem", color: "#64748b", textTransform: "uppercase", display: "block" }}>Expires</span>
+                            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#ffffff" }}>{expiry || "MM/YY"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.7rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: "0.4rem" }}>Cardholder Name</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. Jane Doe" 
+                            required 
+                            value={cardName} 
+                            onChange={(e) => setCardName(e.target.value)} 
+                            style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "0.75rem", color: "white", fontSize: "0.9rem" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.7rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: "0.4rem" }}>Card Number</label>
+                          <input 
+                            type="text" 
+                            placeholder="xxxx xxxx xxxx xxxx" 
+                            required 
+                            value={cardNumber} 
+                            onChange={handleCardNumberChange} 
+                            style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "0.75rem", color: "white", fontSize: "0.9rem" }}
+                          />
+                        </div>
+                        <div style={{ display: "flex", gap: "1rem" }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: "0.4rem" }}>Expiry Date</label>
+                            <input 
+                              type="text" 
+                              placeholder="MM/YY" 
+                              required 
+                              value={expiry} 
+                              onChange={handleExpiryChange} 
+                              style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "0.75rem", color: "white", fontSize: "0.9rem", textAlign: "center" }}
+                            />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: "0.4rem" }}>CVV Code</label>
+                            <input 
+                              type="password" 
+                              placeholder="•••" 
+                              required 
+                              value={cvv} 
+                              onChange={handleCvvChange} 
+                              style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "0.75rem", color: "white", fontSize: "0.9rem", textAlign: "center" }}
+                            />
+                          </div>
+                        </div>
+
+                        <button 
+                          type="submit" 
+                          disabled={cardSubmitting}
+                          style={{ 
+                            display: "block", 
+                            width: "100%",
+                            background: "#ffffff", 
+                            color: "#000000", 
+                            border: "none",
+                            padding: "0.85rem", 
+                            borderRadius: "100px", 
+                            fontWeight: 800, 
+                            fontSize: "0.9rem",
+                            cursor: "pointer",
+                            boxShadow: "0 0 20px rgba(255,255,255,0.1)",
+                            marginTop: "0.5rem",
+                            textAlign: "center"
+                          }}
+                        >
+                          {cardSubmitting ? "Processing Transaction..." : `Authorize & Pay ${invoice.amount.toLocaleString()} ${invoice.currency}`}
+                        </button>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", margin: "1rem 0" }}>
+                          <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }}></div>
+                          <span style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase" }}>OR</span>
+                          <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }}></div>
+                        </div>
+
+                        <a 
+                          href={invoice.nowpayment_link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{ 
+                            display: "block", 
+                            width: "100%",
+                            background: "rgba(255,255,255,0.02)", 
+                            color: "#ffffff", 
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            padding: "0.85rem", 
+                            borderRadius: "100px", 
+                            fontWeight: 700, 
+                            fontSize: "0.9rem",
+                            cursor: "pointer",
+                            textAlign: "center",
+                            textDecoration: "none",
+                            boxShadow: "0 4px 15px rgba(0,0,0,0.2)"
+                          }}
+                        >
+                          💳 Pay securely via Official NOWPayments Processor
+                        </a>
+                      </div>
+                    </form>
+                  ) : (
+                    /* Crypto & QR Option with official coin selector */
+                    <div>
+                      {/* Coin Buttons */}
+                      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
+                        {["usdt", "btc", "eth"].map((coin) => (
+                          <button
+                            key={coin}
+                            onClick={() => setSelectedCoin(coin)}
+                            style={{
+                              flex: 1,
+                              background: selectedCoin === coin ? "rgba(16, 185, 129, 0.1)" : "rgba(255,255,255,0.02)",
+                              border: selectedCoin === coin ? "1px solid #10b981" : "1px solid rgba(255,255,255,0.05)",
+                              color: selectedCoin === coin ? "#34d399" : "#94a3b8",
+                              borderRadius: "10px",
+                              padding: "0.5rem",
+                              fontSize: "0.8rem",
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "4px"
+                            }}
+                          >
+                            <span style={{ width: "6px", height: "6px", backgroundColor: selectedCoin === coin ? "#10b981" : "#64748b", borderRadius: "50%" }}></span>
+                            {coin}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* QR Code */}
+                      <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.5rem" }}>
+                        <div style={{ background: "#ffffff", padding: "10px", borderRadius: "16px", display: "inline-block", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
+                          <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&bgcolor=ffffff&color=000000&data=${encodeURIComponent(coinDetails.qrData)}`}
+                            alt="Payment QR Code" 
+                            style={{ width: "160px", height: "160px", display: "block" }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Display conversion details */}
+                      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: "1rem", marginBottom: "1.5rem", textAlign: "left" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                          <span style={{ color: "#64748b", fontSize: "0.75rem" }}>Send Amount:</span>
+                          <strong style={{ color: "#ffffff", fontSize: "0.85rem" }}>{coinDetails.amount} {coinDetails.ticker}</strong>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                          <span style={{ color: "#64748b", fontSize: "0.75rem" }}>Network:</span>
+                          <span style={{ color: "#10b981", fontSize: "0.75rem", fontWeight: 700 }}>{coinDetails.network}</span>
+                        </div>
+                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "0.5rem", marginTop: "0.5rem" }}>
+                          <span style={{ color: "#64748b", fontSize: "0.75rem", display: "block", marginBottom: "4px" }}>Deposit Wallet Address:</span>
+                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            <span style={{ color: "#94a3b8", fontSize: "0.7rem", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                              {coinDetails.address}
+                            </span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(coinDetails.address);
+                                alert("Deposit wallet address copied!");
+                              }}
+                              style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#ffffff", padding: "2px 8px", borderRadius: "4px", fontSize: "0.65rem", fontWeight: 600, cursor: "pointer" }}
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={handleVerifyCryptoPayment}
+                        disabled={cryptoVerifying}
+                        style={{ 
+                          display: "block", 
+                          width: "100%",
+                          background: "#ffffff", 
+                          color: "#000000", 
+                          border: "none",
+                          padding: "0.85rem", 
+                          borderRadius: "100px", 
+                          fontWeight: 800, 
+                          fontSize: "0.9rem",
+                          cursor: "pointer",
+                          boxShadow: "0 0 20px rgba(255,255,255,0.1)",
+                          marginBottom: "1rem"
+                        }}
+                      >
+                        {cryptoVerifying ? "Verifying Transaction on Ledger..." : "Check Blockchain Status"}
+                      </button>
+
+                      <a 
+                        href={invoice.nowpayment_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ 
+                          display: "block", 
+                          color: "#64748b", 
+                          fontSize: "0.8rem",
+                          fontWeight: 600,
+                          textDecoration: "underline",
+                          marginBottom: "1.5rem"
+                        }}
+                      >
+                        Open Official Escrow Page
+                      </a>
+
+                      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", color: "#64748b", fontSize: "0.75rem" }}>
+                        <div style={{ width: "6px", height: "6px", backgroundColor: "#eab308", borderRadius: "50%", animation: "pulse 1.5s infinite" }}></div>
+                        <span>Listening for blockchain confirmations...</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

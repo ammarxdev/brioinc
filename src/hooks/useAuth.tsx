@@ -25,11 +25,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for dev bypass
+    // Check for dev bypass - only apply to administrative paths
     const devBypassAuth =
       process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true" &&
       typeof window !== "undefined" &&
-      ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+      ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname) &&
+      window.location.pathname.startsWith("/admin");
 
     if (devBypassAuth) {
       setUser({

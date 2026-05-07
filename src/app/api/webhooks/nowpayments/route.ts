@@ -211,18 +211,16 @@ export async function POST(req: Request) {
           .update({ balance: currentBalance + Number(invoiceData.amount) })
           .eq('id', userData.id);
 
-        try {
-          await sendPaymentSuccessfulEmail({
-            to: userData.email,
-            userName: userData.name || 'Vendor',
-            clientName: invoiceData.client_name || 'Client',
-            amount: Number(invoiceData.amount),
-            currency: invoiceData.currency || 'USD',
-            invoiceNumber: invoiceData.invoice_number,
-          });
-        } catch (emailErr: any) {
-          console.warn('Payment success notification email failed:', emailErr.message);
-        }
+        sendPaymentSuccessfulEmail({
+          to: userData.email,
+          userName: userData.name || 'Vendor',
+          clientName: invoiceData.client_name || 'Client',
+          amount: Number(invoiceData.amount),
+          currency: invoiceData.currency || 'USD',
+          invoiceNumber: invoiceData.invoice_number,
+        }).catch((emailErr: any) => {
+          console.warn('Payment success notification email failed asynchronously:', emailErr.message);
+        });
       }
     }
 

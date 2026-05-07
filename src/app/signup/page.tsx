@@ -91,31 +91,18 @@ export default function SignupPage() {
       if (signUpError) throw signUpError;
       if (!data.user) throw new Error("Account creation failed.");
 
-      if (!data.session) {
-        setSuccess("Account created. Please verify your email, then sign in.");
-        router.push(`/login?email=${encodeURIComponent(normalizedEmail)}`);
-        return;
-      }
-
-      const { error: profileErr } = await supabase
-        .from("users")
-        .update({
-          name: `${firstName.trim()} ${lastName.trim()}`.trim(),
-          email: normalizedEmail,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          date_of_birth: dateOfBirth,
+      // Store signup registration fields in localStorage to be created only when OTP is verified in Step 2
+      if (typeof window !== "undefined") {
+        localStorage.setItem("brioinc_pending_signup_profile", JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
           phone: phone.trim(),
+          dateOfBirth,
           address: address.trim(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", data.user.id);
-
-      if (profileErr) {
-        throw new Error("Account created but profile setup failed. Please sign in and try again.");
+        }));
       }
 
-      router.push("/dashboard/verification");
+      router.push("/signup/kyc");
     } catch (err: any) {
       setError(err.message || "Failed to create account.");
     } finally {

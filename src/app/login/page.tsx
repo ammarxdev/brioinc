@@ -32,22 +32,35 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     setInfo("");
+    console.log("Login button clicked for:", email);
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
       if (!normalizedEmail) throw new Error("Email is required.");
       if (!password) throw new Error("Password is required.");
 
+      console.log("Initiating Supabase signInWithPassword...");
       const { data, error } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       });
-      if (error) throw error;
-      if (!data?.session) throw new Error("Sign-in failed. Please try again.");
+      console.log("Supabase Response:", { data, error });
+
+      if (error) {
+        console.warn("Supabase Auth Error returned:", error.message);
+        throw error;
+      }
+      if (!data?.session) {
+        console.warn("No session returned in data payload.");
+        throw new Error("Sign-in failed. Please try again.");
+      }
+      console.log("Login successful! Redirecting to /dashboard...");
       router.push("/dashboard");
     } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      console.error("Login process caught error:", err);
       setError(err.message || "Failed to sign in.");
     } finally {
+      console.log("handleLogin complete, resetting loading state.");
       setLoading(false);
     }
   };

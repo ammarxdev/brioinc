@@ -21,9 +21,9 @@ export default function ProtectedRoute({ children, requireAdmin = false, require
         router.push("/");
       } else if (requireAdmin && user.role !== "admin") {
         router.push("/dashboard");
-      } else if (requireVerified && !user.isVerified && pathname !== "/dashboard/verification") {
-        router.push("/dashboard/verification");
-      } else if (!requireVerified && user.isVerified && pathname === "/dashboard/verification") {
+      } else if (requireVerified && !user.isVerified && pathname !== "/signup/kyc") {
+        router.push("/signup/kyc");
+      } else if (!requireVerified && user.isVerified && pathname === "/signup/kyc") {
         router.push("/dashboard");
       }
     }
@@ -37,7 +37,7 @@ export default function ProtectedRoute({ children, requireAdmin = false, require
 
   if (!user) return null;
   if (requireAdmin && user.role !== "admin") return null;
-  if (requireVerified && !user.isVerified && pathname !== "/dashboard/verification") return null;
+  if (requireVerified && !user.isVerified && pathname !== "/signup/kyc") return null;
 
   return <>{children}</>;
 }

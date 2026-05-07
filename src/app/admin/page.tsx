@@ -164,43 +164,19 @@ export default function AdminDashboardPage() {
   };
 
   const fetchPendingUsers = async () => {
-    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-    if (isBypass) {
-      setPendingUsers([
-        {
-          id: "mock-user-1",
-          name: "Muhammad Ali",
-          email: "m.ali@fastmail.com",
-          status: "pending",
-          cnic_front: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
-          cnic_back: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80"
-        },
-        {
-          id: "mock-user-2",
-          name: "Sara Khan",
-          email: "sara.khan@gmail.com",
-          status: "pending",
-          cnic_front: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80",
-          cnic_back: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=600&q=80"
-        }
-      ]);
-      return;
-    }
-
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session?.access_token) {
-        throw new Error("Unauthorized");
+      const headers: any = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
       }
 
       const res = await fetch("/api/admin/kyc/pending", {
         method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers,
       });
 
       const payload = await res.json();
@@ -219,12 +195,37 @@ export default function AdminDashboardPage() {
           status: "pending",
           cnic_front: s.cnic_front_url,
           cnic_back: s.cnic_back_url,
+          selfie: s.selfie_url,
         };
       });
 
       setPendingUsers(mapped);
     } catch (err) {
-      console.error("Error fetching users:", err);
+      console.warn("Error fetching real users, falling back to mock:", err);
+      // Fallback mock data for testing/development when DB query fails or unconfigured
+      const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
+      if (isBypass) {
+        setPendingUsers([
+          {
+            id: "mock-user-1",
+            name: "Muhammad Ali",
+            email: "m.ali@fastmail.com",
+            status: "pending",
+            cnic_front: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
+            cnic_back: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80",
+            selfie: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"
+          },
+          {
+            id: "mock-user-2",
+            name: "Sara Khan",
+            email: "sara.khan@gmail.com",
+            status: "pending",
+            cnic_front: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80",
+            cnic_back: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=600&q=80",
+            selfie: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80"
+          }
+        ]);
+      }
     }
   };
 
@@ -1222,10 +1223,10 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Document Images Display */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "2rem" }}>
                 <div>
                   <span style={{ color: "#475569", fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem" }}>CNIC Front Side</span>
-                  <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", background: "#f1f5f9", height: "180px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", background: "#f1f5f9", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
                     {selectedReviewUser.cnic_front ? (
                       <img 
                         src={selectedReviewUser.cnic_front} 
@@ -1240,7 +1241,7 @@ export default function AdminDashboardPage() {
 
                 <div>
                   <span style={{ color: "#475569", fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem" }}>CNIC Back Side</span>
-                  <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", background: "#f1f5f9", height: "180px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", background: "#f1f5f9", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
                     {selectedReviewUser.cnic_back ? (
                       <img 
                         src={selectedReviewUser.cnic_back} 
@@ -1249,6 +1250,21 @@ export default function AdminDashboardPage() {
                       />
                     ) : (
                       <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>No Back Image Uploaded</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ color: "#475569", fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem" }}>Selfie (SN)</span>
+                  <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", background: "#f1f5f9", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                    {selectedReviewUser.selfie ? (
+                      <img 
+                        src={selectedReviewUser.selfie} 
+                        alt="Selfie" 
+                        style={{ width: "100%", height: "100%", objectFit: "contain" }} 
+                      />
+                    ) : (
+                      <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>No Selfie Uploaded</span>
                     )}
                   </div>
                 </div>

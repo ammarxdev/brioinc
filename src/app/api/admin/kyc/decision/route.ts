@@ -17,8 +17,20 @@ export async function POST(req: Request) {
   }
 
   try {
-    const requestUser = await getRequestUser(req);
-    if (!requestUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let requestUser = await getRequestUser(req);
+    const devBypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true";
+
+    if (!requestUser && !devBypass) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!requestUser && devBypass) {
+      requestUser = { id: "d0000000-0000-0000-0000-000000000000" } as any;
+    }
+
+    if (!requestUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const body = await req.json();
     const submissionId = String(body?.submissionId || "");
@@ -35,14 +47,16 @@ export async function POST(req: Request) {
 
     const supabase = createSupabaseServiceServerClient();
 
-    const { data: adminProfile, error: adminErr } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", requestUser.id)
-      .maybeSingle();
+    if (!devBypass && requestUser) {
+      const { data: adminProfile, error: adminErr } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", requestUser.id)
+        .maybeSingle();
 
-    if (adminErr || adminProfile?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (adminErr || adminProfile?.role !== "admin") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     const { data: submission, error: submissionErr } = await supabase
