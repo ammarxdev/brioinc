@@ -2,10 +2,50 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleContinue = async () => {
+    setError("");
+    const normalized = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalized }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to continue");
+      }
+
+      if (data.exists) {
+        router.push(`/login?email=${encodeURIComponent(normalized)}&reason=exists`);
+      } else {
+        router.push(`/signup?email=${encodeURIComponent(normalized)}`);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="landing-container">
       {/* Financial Background Image Layer */}
@@ -41,15 +81,52 @@ export default function LandingPage() {
             <p className="company-name-bottom">Brioinc x Binance</p>
           </div>
 
-          <Link href="/signup" className="discover-btn">
-            START YOUR CONVERSION
-            <span className="btn-icon-circle">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </span>
-          </Link>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.75rem", width: "min(520px, 100%)" }}>
+            {error && (
+              <div style={{ background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.24)", color: "#f87171", padding: "0.85rem 1rem", borderRadius: "14px", fontSize: "0.85rem", width: "100%" }}>
+                {error}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "0.75rem", width: "100%", justifyContent: "flex-end" }}>
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                placeholder="Enter your email"
+                style={{
+                  flex: 1,
+                  padding: "14px 18px",
+                  borderRadius: "999px",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  background: "rgba(0,0,0,0.35)",
+                  color: "white",
+                  outline: "none",
+                  fontSize: "0.95rem",
+                }}
+                disabled={loading}
+              />
+
+              <button
+                onClick={handleContinue}
+                className="discover-btn"
+                style={{ border: "none", cursor: "pointer" }}
+                disabled={loading}
+              >
+                {loading ? "Checking..." : "Continue"}
+                <span className="btn-icon-circle">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </span>
+              </button>
+            </div>
+
+            <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.75)" }}>
+              Already have an account? <Link href="/login" style={{ color: "white", fontWeight: 700, textDecoration: "none" }}>Sign in</Link>
+            </div>
+          </div>
         </div>
       </main>
 

@@ -11,12 +11,6 @@ export default function OverviewPage() {
   const [cards, setCards] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-    }
-  }, [user, fetchDashboardData]);
-
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -44,6 +38,13 @@ export default function OverviewPage() {
       setLoading(false);
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user, fetchDashboardData]);
+
 
   return (
     <div className="page-content">

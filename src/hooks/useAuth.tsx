@@ -7,9 +7,10 @@ interface AuthUser {
   id: string;
   email: string | null;
   name?: string;
-  status: "pending" | "approved" | "rejected";
+  status: "kyc_required" | "pending" | "approved" | "rejected";
   isVerified: boolean;
   role: "user" | "admin";
+  kycRejectionReason?: string | null;
 }
 
 interface AuthContextType {
@@ -24,12 +25,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check for dev bypass
+    const devBypassAuth =
+      process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true" &&
+      typeof window !== "undefined" &&
+      ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+
+    if (devBypassAuth) {
+      setUser({
+        id: "d0000000-0000-0000-0000-000000000000",
+        email: "admin@brioinc.net",
+        name: "Development Admin",
+        status: "approved",
+        isVerified: true,
+        role: "admin",
+      });
+      setLoading(false);
+      return;
+    }
+
     // Get initial session
     const initializeAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        await fetchUserProfile(session.user.id, session.user.email);
+        await fetchUserProfile(session.user.id, session.user.email, session.user.user_metadata);
       } else {
         setUser(null);
         setLoading(false);
@@ -41,7 +61,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        await fetchUserProfile(session.user.id, session.user.email);
+        await fetchUserProfile(session.user.id, session.user.email, session.user.user_metadata);
       } else {
         setUser(null);
         setLoading(false);
@@ -53,7 +73,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  async function fetchUserProfile(userId: string, email: string | undefined) {
+  async function fetchUserProfile(userId: string, email: string | undefined, userMetadata?: any) {
     try {
       const { data, error } = await supabase
         .from("users")
@@ -65,22 +85,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error("Error fetching user profile", error);
       }
 
+      const metadataName = userMetadata?.name || null;
+
       if (data) {
+        let currentName = data.name;
+        if (!currentName && metadataName) {
+          currentName = metadataName;
+          await supabase
+            .from("users")
+            .update({ name: metadataName })
+            .eq("id", userId);
+        }
+
         setUser({
           id: userId,
           email: email || null,
-          name: data.name,
+          name: currentName,
           status: data.status,
-          isVerified: data.is_verified, // Note: Supabase commonly uses snake_case, but adjust if needed
+          isVerified: data.is_verified,
           role: data.role || "user",
+          kycRejectionReason: (data as any).kyc_rejection_reason ?? null,
         });
       } else {
         if (email) {
           const { error: insertError } = await supabase.from("users").insert({
             id: userId,
             email,
-            name: null,
-            status: "pending",
+            name: metadataName,
+            status: "kyc_required",
             is_verified: false,
             role: "user",
           });
@@ -93,9 +125,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser({
           id: userId,
           email: email || null,
-          status: "pending",
+          name: metadataName || undefined,
+          status: "kyc_required",
           isVerified: false,
-          role: "user"
+          role: "user",
+          kycRejectionReason: null,
         });
       }
     } catch (err) {
@@ -103,7 +137,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading }}>

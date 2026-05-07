@@ -2,9 +2,121 @@
 
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
+import { useMemo, useState, useRef } from 'react';
+import { supabase } from "@/lib/supabase/client";
 
 export default function VerificationPage() {
   const { user, loading } = useAuth();
+  const [cnicFrontFile, setCnicFrontFile] = useState<File | null>(null);
+  const [cnicBackFile, setCnicBackFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [msg, setMsg] = useState({ type: "", text: "" });
+
+  const frontInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
+
+  const cnicFrontPreview = useMemo(() => (cnicFrontFile ? URL.createObjectURL(cnicFrontFile) : null), [cnicFrontFile]);
+  const cnicBackPreview = useMemo(() => (cnicBackFile ? URL.createObjectURL(cnicBackFile) : null), [cnicBackFile]);
+
+  const validateFile = (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      return "File size must be under 5MB.";
+    }
+    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+      return "Only PNG, JPG, or WEBP images are allowed.";
+    }
+    return null;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, side: "front" | "back") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateFile(file);
+    if (validationError) {
+      setMsg({ type: "error", text: validationError });
+      return;
+    }
+
+    if (side === "front") {
+      setCnicFrontFile(file);
+    } else {
+      setCnicBackFile(file);
+    }
+  };
+
+  const handleSubmitVerification = async () => {
+    if (!cnicFrontFile || !cnicBackFile) {
+      setMsg({ type: "error", text: "Please upload both CNIC Front and CNIC Back images." });
+      return;
+    }
+
+    setSubmitting(true);
+    setMsg({ type: "", text: "" });
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.user) {
+        throw new Error("Unauthorized. Please sign in again.");
+      }
+
+      const userId = session.user.id;
+      const timestamp = Date.now();
+
+      const extFromType = (t: string) => {
+        if (t === "image/png") return "png";
+        if (t === "image/webp") return "webp";
+        return "jpg";
+      };
+
+      const frontPath = `${userId}/${timestamp}-front.${extFromType(cnicFrontFile.type)}`;
+      const backPath = `${userId}/${timestamp}-back.${extFromType(cnicBackFile.type)}`;
+
+      const frontUpload = await supabase.storage.from("kyc").upload(frontPath, cnicFrontFile, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: cnicFrontFile.type,
+      });
+
+      if (frontUpload.error) throw frontUpload.error;
+
+      const backUpload = await supabase.storage.from("kyc").upload(backPath, cnicBackFile, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: cnicBackFile.type,
+      });
+
+      if (backUpload.error) throw backUpload.error;
+
+      const submitRes = await fetch("/api/kyc/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          cnicFrontPath: frontPath,
+          cnicBackPath: backPath,
+        }),
+      });
+
+      const submitData = await submitRes.json();
+      if (!submitRes.ok) {
+        throw new Error(submitData?.error || "Failed to submit verification");
+      }
+
+      setMsg({ type: "success", text: "CNIC verification images submitted successfully! Reloading..." });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err: any) {
+      console.error("CNIC submit error:", err);
+      setMsg({ type: "error", text: err.message || "Failed to submit verification." });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return <div className="page-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
@@ -15,9 +127,9 @@ export default function VerificationPage() {
       <h1 className="page-title">Account Status</h1>
       <p className="page-subtitle">
         {user?.status === 'pending' 
-          ? "Your account is currently under review by our administration team."
+          ? "Your account verification is under review. Please wait up to 24 hours for approval."
           : user?.status === 'rejected'
-          ? "Your account application has been declined. Please contact support for more details."
+          ? (user.kycRejectionReason ? `Verification was rejected: ${user.kycRejectionReason}` : "Your verification was rejected. Please re-upload your documents.")
           : "Please complete the KYC process to unlock full account features."}
       </p>
 
@@ -132,42 +244,127 @@ export default function VerificationPage() {
                 </svg>
                 Government ID (CNIC)
               </span>
-              <div className="badge badge-success">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-                Verified
-              </div>
+              
+              {user?.status === 'approved' ? (
+                <div className="badge badge-success">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  Verified
+                </div>
+              ) : user?.status === 'pending' ? (
+                <div className="badge" style={{ backgroundColor: "#fef3c7", color: "#d97706", borderColor: "#fde68a" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  Under Review
+                </div>
+              ) : (
+                <div className="badge" style={{ backgroundColor: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5" }}>
+                  Upload Required
+                </div>
+              )}
             </div>
-            <p>Clear photos of original document</p>
+            
+            <p style={{ marginBottom: "1.5rem" }}>Clear photos of original document (Front and Back side of your government CNIC)</p>
+
+            {msg.text && (
+              <div style={{
+                padding: "0.85rem 1rem",
+                borderRadius: "0.75rem",
+                fontSize: "0.85rem",
+                marginBottom: "1.5rem",
+                backgroundColor: msg.type === "error" ? "rgba(239, 68, 68, 0.1)" : "rgba(34, 197, 94, 0.1)",
+                border: msg.type === "error" ? "1px solid rgba(239, 68, 68, 0.2)" : "1px solid rgba(34, 197, 94, 0.2)",
+                color: msg.type === "error" ? "#f87171" : "#4ade80"
+              }}>
+                {msg.text}
+              </div>
+            )}
+
+            {/* Hidden file inputs */}
+            <input type="file" ref={frontInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileChange(e, "front")} />
+            <input type="file" ref={backInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileChange(e, "back")} />
 
             <div className="id-grid">
-              <div className="id-placeholder">
-                <div className="id-placeholder-content">
-                  <div className="id-camera-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                      <circle cx="12" cy="13" r="4" />
-                    </svg>
+              {/* Front Side */}
+              <div 
+                className="id-placeholder" 
+                onClick={() => (user?.status !== 'approved' && user?.status !== 'pending') && frontInputRef.current?.click()}
+                style={{ cursor: (user?.status !== 'approved' && user?.status !== 'pending') ? 'pointer' : 'default', overflow: 'hidden', position: 'relative' }}
+              >
+                {cnicFrontPreview ? (
+                  <img 
+                    src={cnicFrontPreview} 
+                    alt="CNIC Front" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
+                ) : (
+                  <div className="id-placeholder-content">
+                    <div className="id-camera-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                    </div>
+                    <span>Front Side</span>
+                    <small>Click to upload CNIC Front</small>
                   </div>
-                  <span>Front Side</span>
-                  <small>Uploaded file.jpg</small>
-                </div>
+                )}
               </div>
-              <div className="id-placeholder back">
-                <div className="id-placeholder-content">
-                  <div className="id-camera-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                      <circle cx="12" cy="13" r="4" />
-                    </svg>
+
+              {/* Back Side */}
+              <div 
+                className="id-placeholder back" 
+                onClick={() => (user?.status !== 'approved' && user?.status !== 'pending') && backInputRef.current?.click()}
+                style={{ cursor: (user?.status !== 'approved' && user?.status !== 'pending') ? 'pointer' : 'default', overflow: 'hidden', position: 'relative' }}
+              >
+                {cnicBackPreview ? (
+                  <img 
+                    src={cnicBackPreview} 
+                    alt="CNIC Back" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
+                ) : (
+                  <div className="id-placeholder-content">
+                    <div className="id-camera-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                    </div>
+                    <span>Back Side</span>
+                    <small>Click to upload CNIC Back</small>
                   </div>
-                  <span>Back Side</span>
-                  <small>Uploaded file_back.jpg</small>
-                </div>
+                )}
               </div>
             </div>
+
+            {/* Submit Button */}
+            {(user?.status !== 'approved' && user?.status !== 'pending') && (
+              <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                <button 
+                  onClick={handleSubmitVerification}
+                  disabled={submitting || !cnicFrontFile || !cnicBackFile}
+                  className="btn-upload"
+                  style={{ 
+                    backgroundColor: "#0f172a", 
+                    color: "white", 
+                    width: "100%", 
+                    padding: "1rem", 
+                    borderRadius: "0.75rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    border: "none"
+                  }}
+                >
+                  {submitting ? "Uploading Documents..." : "Submit CNIC for Verification"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

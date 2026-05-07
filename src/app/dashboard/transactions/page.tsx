@@ -10,12 +10,6 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchTransactions();
-    }
-  }, [user, filter, fetchTransactions]);
-
   const fetchTransactions = useCallback(async () => {
     try {
       setLoading(true);
@@ -40,6 +34,13 @@ export default function TransactionsPage() {
       setLoading(false);
     }
   }, [user?.id, filter]);
+
+  useEffect(() => {
+    if (user) {
+      fetchTransactions();
+    }
+  }, [user, filter, fetchTransactions]);
+
 
   return (
     <div className="page-content">

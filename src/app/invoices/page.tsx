@@ -1,70 +1,207 @@
 "use client";
-import "../invoices.css";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase/client";
+import "./invoices.css";
 
 export default function NewInvoicePage() {
-  const [clientEmail, setClientEmail] = useState("");
-  const [description, setDescription] = useState(""); // eslint-disable-line @typescript-eslint/no-unused-vars
-  const [amount, setAmount] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false); // eslint-disable-line @typescript-eslint/no-unused-vars
-  const [error, setError] = useState(""); // eslint-disable-line @typescript-eslint/no-unused-vars
   const { user } = useAuth();
 
+  // Form Fields
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("Thank you for your business.");
+  
+  // Bank Fields
+  const [bankName, setBankName] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankCountry, setBankCountry] = useState("");
+  const [saveBankProfile, setSaveBankProfile] = useState(false);
+
+  // Saved Bank Profiles
+  const [savedBanks, setSavedBanks] = useState<any[]>([]);
+  const [selectedBankId, setSelectedBankId] = useState<string>("new");
+
+  // State Management
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [error, setError] = useState("");
+
+  // Fetch saved bank profiles on mount
+  useEffect(() => {
+    if (user?.id) {
+      fetchSavedBanks();
+    }
+  }, [user]);
+
+  const fetchSavedBanks = async () => {
+    try {
+      const { data, error: fetchErr } = await supabase
+        .from("bank_details")
+        .select("*")
+        .eq("user_id", user?.id);
+      
+      if (!fetchErr && data) {
+        setSavedBanks(data);
+      }
+    } catch (err) {
+      console.warn("Error fetching bank profiles:", err);
+    }
+  };
+
+  // Autofill form when saved bank profile is selected
+  const handleBankSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    setSelectedBankId(id);
+    
+    if (id === "new") {
+      setBankName("");
+      setBankAccountNumber("");
+      setBankCountry("");
+    } else {
+      const bank = savedBanks.find(b => b.id === id);
+      if (bank) {
+        setBankName(bank.bank_name);
+        // Bank account number is encrypted on server, so we prompt them to re-enter if updating, 
+        // or we allow them to keep it as is. We'll pre-fill a placeholder.
+        setBankAccountNumber("••••••••••••••••");
+        setBankCountry(bank.country);
+      }
+    }
+  };
+
   const handleSendInvoice = async () => {
-    if (!clientEmail || !amount) {
-      setError("Please fill out required fields");
+    setError("");
+    setSuccess(false);
+
+    if (!clientEmail || !clientName || !amount || !bankName || !bankAccountNumber || !bankCountry) {
+      setError("Please complete all required fields, including receiving bank details.");
       return;
     }
-    
+
     setLoading(true);
-    setError("");
-    
+
     try {
-      await axios.post('/api/invoices', {
-        userId: user?.id,
-        clientEmail,
-        description: description || "Enterprise Software License",
-        amount: parseFloat(amount),
-        invoiceNumber: "INV-" + Math.floor(Math.random() * 10000)
-      });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError("You must be logged in to create an invoice.");
+        return;
+      }
       
-      setSuccess(true);
-      // Reset form or redirect
-    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      // 1. If save bank profile checked AND it's a new profile, save it to bank_details (optional client-side fallback check)
+      if (saveBankProfile && selectedBankId === "new") {
+        try {
+          await fetch('/api/bank-details', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              bankName,
+              accountName: user?.name || "User Account",
+              accountNumber: bankAccountNumber,
+              country: bankCountry,
+              isDefault: savedBanks.length === 0,
+            }),
+          });
+          fetchSavedBanks();
+        } catch (bankErr) {
+          console.warn("Failed to save bank profile, proceeding with invoice:", bankErr);
+        }
+      }
+
+      // 2. Dispatch creation to our secure api backend
+      const response = await axios.post("/api/invoices", {
+        clientName,
+        clientEmail,
+        amount: parseFloat(amount),
+        currency,
+        description: description || "Professional Services Rendering",
+        bankName,
+        bankAccountNumber: bankAccountNumber === "••••••••••••••••" 
+          ? (savedBanks.find(b => b.id === selectedBankId)?.account_number_encrypted || "")
+          : bankAccountNumber,
+        bankCountry,
+        notes,
+      }, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        }
+      });
+
+      if (response.data.success) {
+        setSuccess(true);
+        setGeneratedLink(response.data.payPageUrl);
+        
+        // Reset non-bank form fields
+        setClientName("");
+        setClientEmail("");
+        setAmount("");
+        setDescription("");
+      }
+    } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.error || err.message || "Failed to create invoice.");
+      setError(err.response?.data?.error || err.message || "Failed to initiate invoice.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="invoice-content">
-      <div className="invoice-header">
+    <div className="invoice-content" style={{ background: "#050505", minHeight: "100vh", color: "#ffffff" }}>
+      <div className="invoice-header" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "1.5rem" }}>
         <div>
-          <h1 className="invoice-header-title">New Invoice</h1>
-          <div className="invoice-header-sub">Create and send a new invoice to your customer.</div>
-        </div>
-        <div className="invoice-actions">
-          <button className="btn btn-outline">Save Draft</button>
-          <a href="/invoices/preview" className="btn btn-dark" style={{ textDecoration: 'none' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-            Send Invoice
-          </a>
+          <h1 className="invoice-header-title" style={{ color: "#ffffff", letterSpacing: "-0.03em" }}>Create Invoice</h1>
+          <div className="invoice-header-sub" style={{ color: "#94a3b8" }}>
+            Generate high-end dynamic invoices and convert global client payments.
+          </div>
         </div>
       </div>
 
+      {error && (
+        <div style={{ background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.2)", color: "#f87171", padding: "1rem", borderRadius: "12px", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      {success && (
+        <div style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", color: "#34d399", padding: "1.5rem", borderRadius: "16px", marginBottom: "2rem" }}>
+          <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.1rem", fontWeight: 700 }}>🚀 Invoice Created and Dispatched!</h3>
+          <p style={{ margin: "0 0 1rem 0", color: "#a7f3d0", fontSize: "0.9rem" }}>
+            A premium notification has been emailed to your client with secure billing details.
+          </p>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", background: "#000000", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <span style={{ fontSize: "0.85rem", color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+              {generatedLink}
+            </span>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(generatedLink);
+                alert("Payment link copied to clipboard!");
+              }}
+              style={{ background: "#ffffff", color: "#000000", border: "none", padding: "0.4rem 0.8rem", borderRadius: "6px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}
+            >
+              Copy Link
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="new-invoice-grid">
+        {/* Left Side Inputs */}
         <div>
-          <div className="card">
-            <div className="card-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {/* Section: Client details */}
+          <div className="card" style={{ background: "#0c0d0e", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="card-title" style={{ color: "#f8fafc" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
@@ -73,220 +210,238 @@ export default function NewInvoicePage() {
             
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Client Name</label>
-                <input type="text" className="form-input" placeholder="e.g. Acme Corp" />
+                <label className="form-label" style={{ color: "#94a3b8" }}>Client Full Name *</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  style={{ background: "#000000", border: "1px solid rgba(255,255,255,0.1)", color: "#ffffff" }}
+                  placeholder="e.g. Acme Corporation Inc" 
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                />
               </div>
               <div className="form-group">
-                <label className="form-label">Client Email</label>
-                <input type="email" className="form-input" placeholder="billing@acmecorp.com" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} />
+                <label className="form-label" style={{ color: "#94a3b8" }}>Client Email *</label>
+                <input 
+                  type="email" 
+                  className="form-input" 
+                  style={{ background: "#000000", border: "1px solid rgba(255,255,255,0.1)", color: "#ffffff" }}
+                  placeholder="billing@acme.com" 
+                  value={clientEmail} 
+                  onChange={(e) => setClientEmail(e.target.value)} 
+                />
               </div>
             </div>
           </div>
 
-          <div className="card">
-            <div className="card-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-              Invoice Details
+          {/* Section: Receiving Bank account */}
+          <div className="card" style={{ background: "#0c0d0e", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="card-title" style={{ color: "#f8fafc", justifyContent: "space-between", display: "flex", width: "100%" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                  <rect x="3" y="21" width="18" height="2" />
+                  <path d="M5 21V10l7-7 7 7v11" />
+                </svg>
+                Receiving Bank Details (For Fiat Payout)
+              </span>
+
+              {savedBanks.length > 0 && (
+                <select 
+                  className="form-input" 
+                  style={{ background: "#000000", border: "1px solid rgba(255,255,255,0.15)", color: "#ffffff", padding: "0.25rem 0.5rem", fontSize: "0.8rem", height: "auto", width: "auto" }}
+                  value={selectedBankId}
+                  onChange={handleBankSelect}
+                >
+                  <option value="new">-- New Bank Profile --</option>
+                  {savedBanks.map((b) => (
+                    <option key={b.id} value={b.id}>{b.bank_name} ({b.country})</option>
+                  ))}
+                </select>
+              )}
             </div>
-            
+
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Invoice Number</label>
-                <input type="text" className="form-input" defaultValue="INV-2024-001" />
+                <label className="form-label" style={{ color: "#94a3b8" }}>Bank Name *</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  style={{ background: "#000000", border: "1px solid rgba(255,255,255,0.1)", color: "#ffffff" }}
+                  placeholder="e.g. JPMorgan Chase" 
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                />
               </div>
               <div className="form-group">
-                <label className="form-label">Issue Date</label>
-                <div className="input-with-icon">
-                  <input type="text" className="form-input" placeholder="mm/dd/yyyy" />
-                  <svg className="input-icon-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                  </svg>
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Due Date</label>
-                <div className="input-with-icon">
-                  <input type="text" className="form-input" placeholder="mm/dd/yyyy" />
-                  <svg className="input-icon-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                  </svg>
-                </div>
+                <label className="form-label" style={{ color: "#94a3b8" }}>Country *</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  style={{ background: "#000000", border: "1px solid rgba(255,255,255,0.1)", color: "#ffffff" }}
+                  placeholder="e.g. United States" 
+                  value={bankCountry}
+                  onChange={(e) => setBankCountry(e.target.value)}
+                />
               </div>
             </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label" style={{ color: "#94a3b8" }}>IBAN / Bank Account Number *</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  style={{ background: "#000000", border: "1px solid rgba(255,255,255,0.1)", color: "#ffffff" }}
+                  placeholder="Enter full IBAN or routing+account string" 
+                  value={bankAccountNumber}
+                  onChange={(e) => setBankAccountNumber(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {selectedBankId === "new" && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem" }}>
+                <input 
+                  type="checkbox" 
+                  id="save_profile"
+                  checked={saveBankProfile}
+                  onChange={(e) => setSaveBankProfile(e.target.checked)}
+                  style={{ accentColor: "#10b981", cursor: "pointer" }}
+                />
+                <label htmlFor="save_profile" style={{ fontSize: "0.85rem", color: "#94a3b8", cursor: "pointer" }}>
+                  Save bank credentials for future invoices
+                </label>
+              </div>
+            )}
           </div>
 
-          <div className="card">
-            <div className="card-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {/* Section: Dynamic Invoice items */}
+          <div className="card" style={{ background: "#0c0d0e", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="card-title" style={{ color: "#f8fafc" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
                 <line x1="8" y1="6" x2="21" y2="6" />
                 <line x1="8" y1="12" x2="21" y2="12" />
                 <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
+                <circle cx="3" cy="6" r="1" />
+                <circle cx="3" cy="12" r="1" />
+                <circle cx="3" cy="18" r="1" />
               </svg>
-              Line Items
+              Invoice Description & Amount
             </div>
             
-            <table className="items-table" style={{ marginBottom: '1rem' }}>
-              <thead>
-                <tr>
-                  <th style={{ width: '50%' }}>Description</th>
-                  <th style={{ width: '15%' }}>Quantity</th>
-                  <th style={{ width: '15%' }}>Rate</th>
-                  <th style={{ width: '20%' }}>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ paddingRight: '1rem' }}>
-                    <input type="text" className="item-desc-input" defaultValue="Enterprise Software License - Annual" />
-                    <input type="text" className="item-desc-sub" placeholder="Additional details (optional)" />
-                  </td>
-                  <td style={{ verticalAlign: 'top', paddingTop: '1rem', paddingRight: '1rem' }}>
-                    <input type="text" className="form-input" style={{ width: '100%' }} defaultValue="1" />
-                  </td>
-                  <td style={{ verticalAlign: 'top', paddingTop: '1rem', paddingRight: '1rem' }}>
-                    <div className="input-with-icon" style={{ flexDirection: 'row-reverse' }}>
-                      <input type="number" className="form-input" style={{ width: '100%', paddingLeft: '1.5rem' }} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="12500" />
-                      <span style={{ position: 'absolute', left: '0.5rem', color: '#64748b' }}>$</span>
-                    </div>
-                  </td>
-                  <td style={{ verticalAlign: 'top', paddingTop: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: 500 }}>$12,500.00</span>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ cursor: 'pointer' }}>
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="form-row" style={{ flexDirection: "column" }}>
+              <div className="form-group" style={{ marginBottom: "1rem" }}>
+                <label className="form-label" style={{ color: "#94a3b8" }}>Itemized Billing Description</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  style={{ background: "#000000", border: "1px solid rgba(255,255,255,0.1)", color: "#ffffff" }}
+                  placeholder="e.g. Enterprise Consulting Services - April" 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
 
-            <button className="btn-add-item">
-              + Add Another Item
-            </button>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label" style={{ color: "#94a3b8" }}>Invoice Fiat Amount *</label>
+                  <div className="input-with-icon" style={{ background: "#000000", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px" }}>
+                    <span style={{ paddingLeft: "0.75rem", color: "#10b981", fontWeight: 700 }}>$</span>
+                    <input 
+                      type="number" 
+                      className="form-input" 
+                      style={{ background: "transparent", border: "none", color: "#ffffff", paddingLeft: "0.25rem", width: "100%" }}
+                      placeholder="5000.00" 
+                      value={amount} 
+                      onChange={(e) => setAmount(e.target.value)} 
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ color: "#94a3b8" }}>Payer Currency</label>
+                  <select 
+                    className="form-input" 
+                    style={{ background: "#000000", border: "1px solid rgba(255,255,255,0.1)", color: "#ffffff", width: "100%" }}
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                  >
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="card">
-            <div className="card-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          {/* Section: Notes & instructions */}
+          <div className="card" style={{ background: "#0c0d0e", border: "1px solid rgba(255,255,255,0.06)", marginBottom: 0 }}>
+            <div className="card-title" style={{ color: "#f8fafc" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
               </svg>
               Notes & Terms
             </div>
             
-            <div className="form-row">
-              <div className="form-group" style={{ flex: '0 0 200px' }}>
-                <label className="form-label" style={{ marginTop: '0.5rem' }}>Message to Customer</label>
-              </div>
-              <div className="form-group">
-                <textarea className="form-input" rows={3} defaultValue="Thank you for your business."></textarea>
-              </div>
-            </div>
-            
-            <div className="form-row">
-              <div className="form-group" style={{ flex: '0 0 200px' }}>
-                <label className="form-label" style={{ marginTop: '0.5rem' }}>Terms and Conditions</label>
-              </div>
-              <div className="form-group">
-                <textarea className="form-input" rows={3} defaultValue="Payment due within 30 days."></textarea>
-              </div>
+            <div className="form-group">
+              <label className="form-label" style={{ color: "#94a3b8" }}>Optional Notes for Client</label>
+              <textarea 
+                className="form-input" 
+                rows={3} 
+                style={{ background: "#000000", border: "1px solid rgba(255,255,255,0.1)", color: "#ffffff", fontFamily: "inherit" }}
+                placeholder="Thank you for your business. Terms are net-30 upon receipt."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              ></textarea>
             </div>
           </div>
         </div>
 
+        {/* Right Side summary */}
         <div>
-          <div className="card">
-            <div className="card-title">Invoice Summary</div>
+          <div className="card" style={{ background: "#0c0d0e", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="card-title" style={{ color: "#f8fafc" }}>Summary</div>
             
-            <div className="summary-row">
-              <span>Subtotal</span>
-              <span>$12,500.00</span>
-            </div>
-            <div className="summary-row">
-              <span>Tax (0%) <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0f172a', marginLeft: '0.5rem', cursor: 'pointer' }}>Add</span></span>
-              <span>$0.00</span>
-            </div>
-            <div className="summary-row">
-              <span>Discount <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0f172a', marginLeft: '0.5rem', cursor: 'pointer' }}>Add</span></span>
-              <span>$0.00</span>
+            <div className="summary-row" style={{ color: "#94a3b8" }}>
+              <span>Billed Amount:</span>
+              <span style={{ color: "#ffffff" }}>{amount ? `${parseFloat(amount).toLocaleString()} ${currency}` : `-`}</span>
             </div>
             
-            <div className="summary-row total">
-              <span className="total-label">Total<br/>Due</span>
-              <span className="total-value">$12,500.00</span>
+            <div className="summary-row" style={{ color: "#94a3b8" }}>
+              <span>Payment Gateway:</span>
+              <span style={{ color: "#10b981", fontWeight: 600 }}>NOWPayments</span>
             </div>
 
-            <button className="btn btn-dark" style={{ width: '100%', marginTop: '1rem', padding: '0.8rem' }} onClick={handleSendInvoice} disabled={loading}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-              {loading ? "Sending..." : "Send Invoice"}
+            <div className="summary-row total" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1rem" }}>
+              <span className="total-label" style={{ color: "#94a3b8" }}>Total Due</span>
+              <span className="total-value" style={{ color: "#10b981", fontSize: "1.50rem" }}>
+                {amount ? `${parseFloat(amount).toLocaleString()} ${currency}` : `0.00 USD`}
+              </span>
+            </div>
+
+            <button 
+              className="btn btn-dark" 
+              style={{ width: "100%", marginTop: "1.5rem", padding: "0.8rem", background: "#ffffff", color: "#000000", border: "none", borderRadius: "100px", fontWeight: 700 }} 
+              onClick={handleSendInvoice} 
+              disabled={loading}
+            >
+              {loading ? "Creating..." : "Generate Invoice Link"}
             </button>
           </div>
 
-          <div className="card">
-            <div className="card-title">Settings</div>
-            
-            <div className="setting-row">
-              <div className="setting-text">
-                <h4>Auto-reminders</h4>
-                <p>Send automatic emails for overdue invoices.</p>
-              </div>
-              <div className="toggle-switch">
-                <div className="toggle-knob"></div>
-              </div>
-            </div>
-            
-            <div className="setting-row">
-              <div className="setting-text">
-                <h4>Accept Online Payments</h4>
-                <p>Credit card, ACH, Bank Transfer.</p>
-              </div>
-              <div className="toggle-switch">
-                <div className="toggle-knob"></div>
-              </div>
-            </div>
-
-            <div style={{ marginTop: '1.5rem' }}>
-              <label className="form-label">Currency</label>
-              <div className="input-with-icon">
-                <select className="form-input" style={{ width: '100%', appearance: 'none' }}>
-                  <option>USD - US Dollar</option>
-                  <option>EUR - Euro</option>
-                  <option>GBP - British Pound</option>
-                </select>
-                <svg className="input-icon-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-title">Customization</div>
-            <div style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 0.5rem auto', display: 'block' }}>
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
+          <div className="card" style={{ background: "#0c0d0e", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0f172a', marginBottom: '0.25rem' }}>Add Company Logo</div>
-              <div style={{ fontSize: '0.75rem' }}>Drag & drop or click to upload</div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: "0.85rem", color: "#f8fafc" }}>Bank-Grade Security</h4>
+                <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b", lineHeight: 1.4 }}>
+                  All account details are encrypted immediately with industrial AES-256-GCM.
+                </p>
+              </div>
             </div>
           </div>
         </div>

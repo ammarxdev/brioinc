@@ -1,85 +1,45 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export default function SignupPage() {
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const withTimeout = async <T,>(promise: Promise<T>, ms: number, timeoutMessage: string) => {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        setTimeout(() => reject(new Error(timeoutMessage)), ms);
-      }),
-    ]);
-  };
+  useEffect(() => {
+    const fromQuery = searchParams.get("email");
+    if (fromQuery && !email) setEmail(fromQuery);
+  }, [searchParams, email]);
 
-  const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-    // Auto-focus next input
-    if (value && index < 5) {
-      const nextInput = document.querySelectorAll('.otp-box')[index + 1] as HTMLInputElement;
-      nextInput?.focus();
-    }
-  };
-
-  const sendOtp = async () => {
-    if (!name) {
-      setError("Please enter your full name first.");
-      return;
-    }
-    if (!email) {
-      setError("Please enter your email address first.");
-      return;
-    }
-    setOtpLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      setOtp(["", "", "", "", "", ""]);
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-          data: {
-            name,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      setIsOtpSent(true);
-      setSuccess("Verification code sent to your email.");
-    } catch (err: any) {
-      console.error('OTP sending error:', err);
-      const message = err?.message || "Failed to send verification code. Please try again.";
-      if (typeof message === "string" && message.toLowerCase().includes("error sending confirmation email")) {
-        setError("Supabase could not send the OTP email. Configure SMTP in your Supabase project (Auth > SMTP) or email OTP sign-up will not work.");
-      } else {
-        setError(message);
-      }
-    } finally {
-      setOtpLoading(false);
-    }
+  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const isStrongPassword = (v: string) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(v);
+  const isValidPhone = (v: string) => /^\+?[0-9]{10,15}$/.test(v);
+  const isAdult = (isoDate: string) => {
+    const d = new Date(isoDate);
+    if (Number.isNaN(d.getTime())) return false;
+    const now = new Date();
+    let age = now.getFullYear() - d.getFullYear();
+    const m = now.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age -= 1;
+    return age >= 18;
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -93,48 +53,66 @@ export default function SignupPage() {
         throw new Error("You must accept the Terms and Conditions.");
       }
 
-      if (!name) {
-        throw new Error("Please fill in all required fields.");
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!isValidEmail(normalizedEmail)) {
+        throw new Error("Please enter a valid email address.");
+      }
+      if (!firstName.trim() || !lastName.trim()) {
+        throw new Error("First name and last name are required.");
+      }
+      if (!dateOfBirth || !isAdult(dateOfBirth)) {
+        throw new Error("You must be at least 18 years old.");
+      }
+      if (!isValidPhone(phone.trim())) {
+        throw new Error("Please enter a valid phone number.");
+      }
+      if (!address.trim()) {
+        throw new Error("Address is required.");
+      }
+      if (!isStrongPassword(password)) {
+        throw new Error("Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.");
+      }
+      if (password !== confirmPassword) {
+        throw new Error("Passwords do not match.");
       }
 
-      if (!isOtpSent) {
-        throw new Error("Please click Send Code first.");
-      }
-
-      const enteredOtp = otp.join("");
-      if (enteredOtp.length !== 6) {
-        throw new Error("Please enter the complete 6-digit verification code.");
-      }
-
-      // Verify OTP with Supabase
-      const { data: verifyData, error: verifyError } = await withTimeout(
-        supabase.auth.verifyOtp({
-          email,
-          token: enteredOtp,
-          type: 'email',
-        }),
-        15000,
-        "OTP verification timed out. Please try again."
-      );
-
-      if (verifyError) throw verifyError;
-      if (!verifyData?.session) {
-        throw new Error("OTP verified but no session was created. Check your Supabase email auth settings.");
-      }
-
-      // Update user metadata after verification
-      const { error: updateError } = await withTimeout(
-        supabase.auth.updateUser({
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
           data: {
-            name: name,
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            name: `${firstName.trim()} ${lastName.trim()}`.trim(),
           },
-        }),
-        15000,
-        "Profile update timed out. Please try again."
-      );
+        },
+      });
 
-      if (updateError) {
-        console.error("Failed to update user metadata:", updateError);
+      if (signUpError) throw signUpError;
+      if (!data.user) throw new Error("Account creation failed.");
+
+      if (!data.session) {
+        setSuccess("Account created. Please verify your email, then sign in.");
+        router.push(`/login?email=${encodeURIComponent(normalizedEmail)}`);
+        return;
+      }
+
+      const { error: profileErr } = await supabase
+        .from("users")
+        .update({
+          name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+          email: normalizedEmail,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          date_of_birth: dateOfBirth,
+          phone: phone.trim(),
+          address: address.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", data.user.id);
+
+      if (profileErr) {
+        throw new Error("Account created but profile setup failed. Please sign in and try again.");
       }
 
       router.push("/dashboard/verification");
@@ -173,26 +151,45 @@ export default function SignupPage() {
           <form onSubmit={handleRegister} className="signup-form">
             <div className="form-row">
               <div className="form-group">
-                <label>Full Name</label>
-                <input type="text" placeholder="e.g. Jane Doe" required value={name} onChange={(e) => setName(e.target.value)} />
+                <label>First Name</label>
+                <input type="text" placeholder="e.g. Jane" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
               </div>
+              <div className="form-group">
+                <label>Last Name</label>
+                <input type="text" placeholder="e.g. Doe" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="form-row">
               <div className="form-group">
                 <label>Email Address</label>
                 <input type="email" placeholder="name@company.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
+              <div className="form-group">
+                <label>Phone Number</label>
+                <input type="tel" placeholder="e.g. +923001234567" required value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </div>
             </div>
 
-            <div className="verification-glass">
-              <label>Security Verification</label>
-              <div className="otp-row">
-                <button type="button" className="send-otp-btn" onClick={sendOtp} disabled={otpLoading}>
-                  {otpLoading ? "..." : isOtpSent ? "Resend" : "Send Code"}
-                </button>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Date of Birth</label>
+                <input type="date" required value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
               </div>
-              <div className="otp-inputs">
-                {otp.map((val, i) => (
-                  <input key={i} type="text" maxLength={1} className="otp-box" value={val} onChange={(e) => handleOtpChange(i, e.target.value)} />
-                ))}
+              <div className="form-group">
+                <label>Address</label>
+                <input type="text" placeholder="Street, City, Country" required value={address} onChange={(e) => setAddress(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Password</label>
+                <input type="password" placeholder="Create a strong password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Confirm Password</label>
+                <input type="password" placeholder="Re-enter your password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
               </div>
             </div>
 
@@ -201,7 +198,7 @@ export default function SignupPage() {
               <label htmlFor="terms">I accept the <a href="/terms">Terms and Conditions</a></label>
             </div>
 
-            <button type="submit" className="submit-btn" disabled={loading || !termsAccepted || !isOtpSent}>
+            <button type="submit" className="submit-btn" disabled={loading || !termsAccepted}>
               {loading ? "Processing..." : "Create Account"}
             </button>
           </form>

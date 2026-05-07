@@ -1,15 +1,20 @@
 create or replace function public.is_admin()
 returns boolean
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  is_admin_user boolean;
+begin
   select exists (
     select 1
     from public.users u
     where u.id = auth.uid()
       and u.role = 'admin'
-  );
+  ) into is_admin_user;
+  return is_admin_user;
+end;
 $$;
 
 alter table public.users enable row level security;

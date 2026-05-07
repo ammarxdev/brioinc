@@ -1,104 +1,49 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [info, setInfo] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const withTimeout = async <T,>(promise: Promise<T>, ms: number, timeoutMessage: string) => {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        setTimeout(() => reject(new Error(timeoutMessage)), ms);
-      }),
-    ]);
-  };
-
-  const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-    if (value && index < 5) {
-      const nextInput = document.querySelectorAll('.otp-box')[index + 1] as HTMLInputElement;
-      nextInput?.focus();
+  useEffect(() => {
+    const fromQuery = searchParams.get("email");
+    const reason = searchParams.get("reason");
+    if (fromQuery && !email) setEmail(fromQuery);
+    if (reason === "exists") {
+      setInfo("Account already exists. Please sign in.");
     }
-  };
-
-  const sendOtp = async () => {
-    if (!email) {
-      setError("Please enter your email address first.");
-      return;
-    }
-
-    setOtpLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false,
-        },
-      });
-
-      if (error) throw error;
-      setIsOtpSent(true);
-      setSuccess("Verification code sent to your email.");
-    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      const message = err?.message || "Failed to send verification code. Please try again.";
-      if (typeof message === "string" && message.toLowerCase().includes("error sending confirmation email")) {
-        setError("Supabase could not send the OTP email. Configure SMTP in your Supabase project (Auth > SMTP) or email OTP sign-in will not work.");
-      } else {
-        setError(message);
-      }
-    } finally {
-      setOtpLoading(false);
-    }
-  };
+  }, [searchParams, email]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setSuccess("");
+    setInfo("");
 
     try {
-      const enteredOtp = otp.join("");
-      if (!isOtpSent) {
-        throw new Error("Please request a verification code first.");
-      }
-      if (enteredOtp.length !== 6) {
-        throw new Error("Please enter the complete 6-digit verification code.");
-      }
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail) throw new Error("Email is required.");
+      if (!password) throw new Error("Password is required.");
 
-      const { data, error } = await withTimeout(
-        supabase.auth.verifyOtp({
-          email,
-          token: enteredOtp,
-          type: 'email',
-        }),
-        15000,
-        "OTP verification timed out. Please try again."
-      );
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
       if (error) throw error;
-      if (!data?.session) {
-        throw new Error("OTP verified but no session was created. Check your Supabase email auth settings.");
-      }
+      if (!data?.session) throw new Error("Sign-in failed. Please try again.");
       router.push("/dashboard");
     } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       setError(err.message || "Failed to sign in.");
@@ -130,7 +75,7 @@ export default function LoginPage() {
           <p className="subtitle">Log in to manage your institutional capital.</p>
 
           {error && <div className="error-alert">{error}</div>}
-          {success && <div className="success-alert">{success}</div>}
+          {info && <div className="success-alert">{info}</div>}
 
           <form onSubmit={handleLogin} className="login-form">
             <div className="form-group">
@@ -138,19 +83,9 @@ export default function LoginPage() {
               <input type="email" placeholder="name@company.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
 
-            <div className="verification-glass">
-              <label>Security Verification</label>
-              <div className="otp-action-row">
-                <button type="button" className="send-otp-btn" onClick={sendOtp} disabled={otpLoading}>
-                  {otpLoading ? "..." : isOtpSent ? "Resend" : "Send Code"}
-                </button>
-                <Link href="/forgot-password" style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'none' }}>Use password reset</Link>
-              </div>
-              <div className="otp-inputs">
-                {otp.map((val, i) => (
-                  <input key={i} type="text" maxLength={1} className="otp-box" value={val} onChange={(e) => handleOtpChange(i, e.target.value)} />
-                ))}
-              </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input type="password" placeholder="Enter your password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
 
             <button type="submit" className="submit-btn" disabled={loading}>

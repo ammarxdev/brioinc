@@ -1,4 +1,4 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS public.users (
   id uuid PRIMARY KEY REFERENCES auth.users(id),
   name text,
   email text,
@@ -8,9 +8,9 @@ CREATE TABLE users (
   balance numeric DEFAULT 0
 );
 
-CREATE TABLE invoices (
+CREATE TABLE IF NOT EXISTS public.invoices (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id uuid REFERENCES users(id),
+  user_id uuid REFERENCES public.users(id),
   amount numeric,
   status text DEFAULT 'unpaid',
   client_email text,
@@ -19,9 +19,9 @@ CREATE TABLE invoices (
   nowpayment_id text,
   invoice_number text
 );
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS public.transactions (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id uuid REFERENCES users(id),
+  user_id uuid REFERENCES public.users(id),
   amount numeric,
   description text,
   status text DEFAULT 'completed',
@@ -29,9 +29,9 @@ CREATE TABLE transactions (
   created_at timestamp with time zone DEFAULT now()
 );
 
-CREATE TABLE cards (
+CREATE TABLE IF NOT EXISTS public.cards (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id uuid REFERENCES users(id),
+  user_id uuid REFERENCES public.users(id),
   card_number text,
   card_holder text,
   expiry_date text,
