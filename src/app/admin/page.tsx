@@ -121,7 +121,7 @@ export default function AdminDashboardPage() {
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: sanitizedUsername,
         password,
       });
 
@@ -164,6 +164,35 @@ export default function AdminDashboardPage() {
   };
 
   const fetchPendingUsers = async () => {
+    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
+    if (isBypass) {
+      setPendingUsers([
+        {
+          id: "mock-user-1",
+          submission_id: "mock-sub-1",
+          user_id: "mock-uid-1",
+          name: "Muhammad Ali",
+          email: "m.ali@fastmail.com",
+          status: "pending",
+          cnic_front: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
+          cnic_back: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80",
+          selfie: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          id: "mock-user-2",
+          submission_id: "mock-sub-2",
+          user_id: "mock-uid-2",
+          name: "Sara Khan",
+          email: "sara.khan@gmail.com",
+          status: "pending",
+          cnic_front: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80",
+          cnic_back: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=600&q=80",
+          selfie: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80"
+        }
+      ]);
+      return;
+    }
+
     try {
       const {
         data: { session },
@@ -201,35 +230,55 @@ export default function AdminDashboardPage() {
 
       setPendingUsers(mapped);
     } catch (err) {
-      console.warn("Error fetching real users, falling back to mock:", err);
-      // Fallback mock data for testing/development when DB query fails or unconfigured
-      const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-      if (isBypass) {
-        setPendingUsers([
-          {
-            id: "mock-user-1",
-            name: "Muhammad Ali",
-            email: "m.ali@fastmail.com",
-            status: "pending",
-            cnic_front: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
-            cnic_back: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80",
-            selfie: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"
-          },
-          {
-            id: "mock-user-2",
-            name: "Sara Khan",
-            email: "sara.khan@gmail.com",
-            status: "pending",
-            cnic_front: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80",
-            cnic_back: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=600&q=80",
-            selfie: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80"
-          }
-        ]);
-      }
+      console.warn("Error fetching real users:", err);
+      setPendingUsers([]);
     }
   };
 
   const fetchInvoices = async () => {
+    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
+    if (isBypass) {
+      setInvoices([
+        {
+          id: "mock-inv-1",
+          invoice_number: "INV-2026-0041",
+          client_name: "Binance Corporate Europe",
+          client_email: "treasury@binance.com",
+          amount: 250000,
+          currency: "EUR",
+          status: "paid",
+          bank_name: "Deutsche Bank AG",
+          bank_country: "Germany",
+          created_at: new Date(Date.now() - 3600000 * 2).toISOString()
+        },
+        {
+          id: "mock-inv-2",
+          invoice_number: "INV-2026-0042",
+          client_name: "Apex Clearing Asia",
+          client_email: "settlements@apex.sg",
+          amount: 145000,
+          currency: "USD",
+          status: "completed",
+          bank_name: "DBS Bank",
+          bank_country: "Singapore",
+          created_at: new Date(Date.now() - 3600000 * 24).toISOString()
+        },
+        {
+          id: "mock-inv-3",
+          invoice_number: "INV-2026-0043",
+          client_name: "Galaxy Digital LP",
+          client_email: "treasury@galaxydigital.io",
+          amount: 89000,
+          currency: "GBP",
+          status: "pending",
+          bank_name: "Barclays Bank PLC",
+          bank_country: "United Kingdom",
+          created_at: new Date(Date.now() - 3600000 * 48).toISOString()
+        }
+      ]);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from("invoices")
@@ -244,6 +293,37 @@ export default function AdminDashboardPage() {
   };
 
   const fetchAuditLogs = async () => {
+    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
+    if (isBypass) {
+      setAdminLogs([
+        {
+          id: "mock-admin-log-1",
+          action: "decrypt-bank",
+          details: "Decrypted receiving bank IBAN details for INV-2026-0042",
+          created_at: new Date(Date.now() - 1200000).toISOString(),
+          ip_address: "192.168.1.144"
+        },
+        {
+          id: "mock-admin-log-2",
+          action: "complete-settlement",
+          details: "Released manual bank wire payout SEPA for INV-2026-0042 (Ref: TXN-9021-X)",
+          created_at: new Date(Date.now() - 3600000 * 4).toISOString(),
+          ip_address: "192.168.1.144"
+        }
+      ]);
+      setEmailLogs([
+        {
+          id: "mock-email-log-1",
+          recipient: "treasury@binance.com",
+          status: "sent",
+          subject: "Brioinc Global Payout Settlement Confirmation",
+          action: "settlement_success",
+          created_at: new Date(Date.now() - 1200000).toISOString()
+        }
+      ]);
+      return;
+    }
+
     try {
       const [adminRes, emailRes] = await Promise.all([
         supabase.from("admin_logs").select("*").order("created_at", { ascending: false }).limit(50),
@@ -258,15 +338,15 @@ export default function AdminDashboardPage() {
   };
 
   const handleApprove = async (user: any) => {
-    try {
-      const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-      if (isBypass) {
-        setPendingUsers(prev => prev.filter(u => u.id !== user.id));
-        alert(`User ${user.name || 'User'} approved successfully (Bypass Mode).`);
-        setSelectedReviewUser(null);
-        return;
-      }
+    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
+    if (isBypass) {
+      setPendingUsers(prev => prev.filter(u => u.id !== user.id));
+      alert(`User ${user.name || 'User'} approved successfully (Bypass Mode).`);
+      setSelectedReviewUser(null);
+      return;
+    }
 
+    try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -293,22 +373,22 @@ export default function AdminDashboardPage() {
       fetchPendingUsers();
       fetchAuditLogs();
     } catch (err) {
-      console.error("Failed to approve user");
+      console.error("Failed to approve user:", err);
     }
   };
 
   const handleReject = async (user: any) => {
     if (!window.confirm("Are you sure you want to reject this user?")) return;
     
-    try {
-      const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-      if (isBypass) {
-        setPendingUsers(prev => prev.filter(u => u.id !== user.id));
-        alert(`User ${user.name || 'User'} rejected successfully (Bypass Mode).`);
-        setSelectedReviewUser(null);
-        return;
-      }
+    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
+    if (isBypass) {
+      setPendingUsers(prev => prev.filter(u => u.id !== user.id));
+      alert(`User ${user.name || 'User'} rejected successfully (Bypass Mode).`);
+      setSelectedReviewUser(null);
+      return;
+    }
 
+    try {
       const reason = window.prompt("Rejection reason (shown to user):", "Document unclear / mismatch") || "";
       if (reason.trim().length < 3) {
         alert("Rejection reason is required.");
@@ -341,7 +421,7 @@ export default function AdminDashboardPage() {
       fetchPendingUsers();
       fetchAuditLogs();
     } catch (err) {
-      console.error("Failed to reject user");
+      console.error("Failed to reject user:", err);
     }
   };
 
@@ -349,6 +429,16 @@ export default function AdminDashboardPage() {
   const handleDecryptBank = async (invoiceId: string) => {
     if (!adminUser) return;
     
+    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
+    if (isBypass) {
+      setDecrypting(true);
+      setTimeout(() => {
+        setDecryptedAccount("PK92BAHL00002008316492");
+        setDecrypting(false);
+      }, 600);
+      return;
+    }
+
     try {
       setDecrypting(true);
       setDecryptedAccount("");
@@ -381,6 +471,17 @@ export default function AdminDashboardPage() {
   const handleConfirmSettlement = async () => {
     if (!selectedInvoice || !referenceNumber) {
       alert("Please enter a valid transfer reference hash/ID.");
+      return;
+    }
+
+    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
+    if (isBypass) {
+      setInvoices(prev => prev.map(inv => inv.id === selectedInvoice.id ? { ...inv, status: 'completed' } : inv));
+      alert("Manual bank wire payout released successfully (Bypass Mode).");
+      setSelectedInvoice(null);
+      setReferenceNumber("");
+      setSettleNotes("");
+      setDecryptedAccount("");
       return;
     }
 
@@ -527,39 +628,6 @@ export default function AdminDashboardPage() {
             <button type="submit" disabled={loginLoading} className="login-btn">
               {loginLoading ? "Verifying Clearance..." : "Establish Secure Session"}
             </button>
-
-            {process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true" && (
-              <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    console.log("Applying administrative auto-bypass...");
-                    const mockAdminUser = {
-                      id: "d0000000-0000-0000-0000-000000000000",
-                      email: "ammarxxsaeed@gmail.com",
-                      user_metadata: { name: "ammar" }
-                    };
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem("brioinc_admin_bypass", "true");
-                    }
-                    setAdminUser(mockAdminUser);
-                    setIsAdmin(true);
-                    fetchInitialData();
-                  }}
-                  style={{ 
-                    background: "none", 
-                    border: "none", 
-                    color: "#3b82f6", 
-                    fontSize: "0.85rem", 
-                    cursor: "pointer", 
-                    textDecoration: "underline",
-                    fontWeight: 700
-                  }}
-                >
-                  ⚡ Development Auto-Bypass (1-Click)
-                </button>
-              </div>
-            )}
           </form>
           
           <div className="login-footer">
@@ -676,7 +744,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="page-content" style={{ minHeight: "100vh", backgroundColor: "#f8fafc", padding: "2.5rem" }}>
+    <div className="page-content">
         
         {/* Dynamic Nav tabs */}
         <div className="admin-header">
@@ -719,16 +787,16 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Navigation Tabs bar */}
-        <div style={{ display: "flex", gap: "1rem", borderBottom: "1px solid #e5e7eb", marginBottom: "1.5rem" }}>
+        <div style={{ display: "flex", gap: "1rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", marginBottom: "1.5rem" }}>
           <button 
             onClick={() => setActiveTab("users")}
             style={{ 
               padding: "0.75rem 1rem", 
               background: "none", 
               border: "none", 
-              borderBottom: activeTab === "users" ? "2px solid #0f172a" : "2px solid transparent", 
+              borderBottom: activeTab === "users" ? "2px solid #ffffff" : "2px solid transparent", 
               fontWeight: activeTab === "users" ? 700 : 500, 
-              color: activeTab === "users" ? "#0f172a" : "#6b7280", 
+              color: activeTab === "users" ? "#ffffff" : "#64748b", 
               cursor: "pointer",
               fontSize: "0.9rem"
             }}
@@ -741,9 +809,9 @@ export default function AdminDashboardPage() {
               padding: "0.75rem 1rem", 
               background: "none", 
               border: "none", 
-              borderBottom: activeTab === "invoices" ? "2px solid #0f172a" : "2px solid transparent", 
+              borderBottom: activeTab === "invoices" ? "2px solid #ffffff" : "2px solid transparent", 
               fontWeight: activeTab === "invoices" ? 700 : 500, 
-              color: activeTab === "invoices" ? "#0f172a" : "#6b7280", 
+              color: activeTab === "invoices" ? "#ffffff" : "#64748b", 
               cursor: "pointer",
               fontSize: "0.9rem"
             }}
@@ -756,9 +824,9 @@ export default function AdminDashboardPage() {
               padding: "0.75rem 1rem", 
               background: "none", 
               border: "none", 
-              borderBottom: activeTab === "audit" ? "2px solid #0f172a" : "2px solid transparent", 
+              borderBottom: activeTab === "audit" ? "2px solid #ffffff" : "2px solid transparent", 
               fontWeight: activeTab === "audit" ? 700 : 500, 
-              color: activeTab === "audit" ? "#0f172a" : "#6b7280", 
+              color: activeTab === "audit" ? "#ffffff" : "#64748b", 
               cursor: "pointer",
               fontSize: "0.9rem"
             }}
@@ -885,28 +953,28 @@ export default function AdminDashboardPage() {
                 type="text" 
                 placeholder="Search Invoice #, Client name, Client email..." 
                 className="form-input"
-                style={{ flex: 1, padding: "0.5rem 0.75rem", border: "1px solid #e5e7eb", borderRadius: "8px" }}
+                style={{ flex: 1, padding: "0.6rem 1rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", background: "rgba(255,255,255,0.02)", color: "white" }}
                 value={invoiceSearch}
                 onChange={(e) => setInvoiceSearch(e.target.value)}
               />
               <select 
                 className="form-input"
-                style={{ width: "200px", padding: "0.5rem", border: "1px solid #e5e7eb", borderRadius: "8px" }}
+                style={{ width: "200px", padding: "0.6rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", background: "rgba(255,255,255,0.02)", color: "white" }}
                 value={invoiceStatusFilter}
                 onChange={(e) => setInvoiceStatusFilter(e.target.value)}
               >
-                <option value="all">All Invoices</option>
-                <option value="pending">Pending Checkout</option>
-                <option value="paid">Paid (Needs Payout)</option>
-                <option value="completed">Completed / Settled</option>
-                <option value="rejected">Rejected / Voided</option>
+                <option value="all" style={{ background: "#050505", color: "white" }}>All Invoices</option>
+                <option value="pending" style={{ background: "#050505", color: "white" }}>Pending Checkout</option>
+                <option value="paid" style={{ background: "#050505", color: "white" }}>Paid (Needs Payout)</option>
+                <option value="completed" style={{ background: "#050505", color: "white" }}>Completed / Settled</option>
+                <option value="rejected" style={{ background: "#050505", color: "white" }}>Rejected / Voided</option>
               </select>
             </div>
 
             <div className="table-container">
               <table className="data-table">
                 <thead>
-                  <tr style={{ color: "#6b7280" }}>
+                  <tr style={{ color: "#64748b" }}>
                     <th>Invoice Number</th>
                     <th>Client Details</th>
                     <th>Billed Amount</th>
@@ -917,18 +985,18 @@ export default function AdminDashboardPage() {
                 </thead>
                 <tbody>
                   {filteredInvoices.length === 0 ? (
-                    <tr><td colSpan={6} style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>No matching invoices found in database ledger.</td></tr>
+                    <tr><td colSpan={6} style={{ textAlign: "center", padding: "3rem", color: "#64748b" }}>No matching invoices found in database ledger.</td></tr>
                   ) : (
                     filteredInvoices.map((inv) => (
                       <tr key={inv.id}>
-                        <td style={{ fontWeight: 700, fontFamily: "monospace" }}>{inv.invoice_number}</td>
+                        <td style={{ fontWeight: 700, fontFamily: "monospace", color: "#ffffff" }}>{inv.invoice_number}</td>
                         <td>
                           <div style={{ display: "flex", flexDirection: "column" }}>
-                            <span style={{ fontWeight: 600 }}>{inv.client_name || 'Partner client'}</span>
-                            <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{inv.client_email}</span>
+                            <span style={{ fontWeight: 600, color: "#ffffff" }}>{inv.client_name || 'Partner client'}</span>
+                            <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{inv.client_email}</span>
                           </div>
                         </td>
-                        <td style={{ fontWeight: 700, color: "#1e293b" }}>
+                        <td style={{ fontWeight: 700, color: "#ffffff" }}>
                           {inv.amount.toLocaleString()} {inv.currency || 'USD'}
                         </td>
                         <td>
@@ -953,14 +1021,14 @@ export default function AdminDashboardPage() {
                             </span>
                           )}
                         </td>
-                        <td style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+                        <td style={{ fontSize: "0.8rem", color: "#64748b" }}>
                           {new Date(inv.created_at).toLocaleDateString()}
                         </td>
                         <td style={{ textAlign: "right" }}>
                           {inv.status === 'paid' && (
                             <button 
                               onClick={() => setSelectedInvoice(inv)}
-                              style={{ border: "none", background: "#0f172a", color: "white", padding: "0.4rem 0.8rem", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                              style={{ border: "none", background: "#ffffff", color: "black", padding: "0.5rem 1rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer", textTransform: "uppercase" }}
                             >
                               Settle Payout
                             </button>
@@ -968,13 +1036,13 @@ export default function AdminDashboardPage() {
                           {inv.status === 'completed' && (
                             <button 
                               onClick={() => setSelectedInvoice(inv)}
-                              style={{ border: "1px solid #d1d5db", background: "white", color: "#374151", padding: "0.4rem 0.8rem", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
+                              style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", color: "#cbd5e1", padding: "0.5rem 1rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
                             >
                               Inspect Log
                             </button>
                           )}
                           {inv.status === 'pending' && (
-                            <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>Awaiting Client</span>
+                            <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Awaiting Client</span>
                           )}
                         </td>
                       </tr>
@@ -990,19 +1058,19 @@ export default function AdminDashboardPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
             {/* Left: Administrative actions */}
             <div className="widget-card">
-              <h3 style={{ margin: "0 0 1rem 0", fontSize: "1rem", fontWeight: 700 }}>Admin Activity Trails (Decryptions & Releases)</h3>
+              <h3 style={{ margin: "0 0 1.25rem 0", fontSize: "1.1rem", fontWeight: 700, color: "white" }}>Admin Activity Trails (Decryptions & Releases)</h3>
               <div style={{ maxHeight: "400px", overflowY: "auto" }}>
                 {adminLogs.length === 0 ? (
-                  <p style={{ color: "#6b7280", fontSize: "0.85rem", textAlign: "center", padding: "2rem" }}>No admin activity logged yet.</p>
+                  <p style={{ color: "#64748b", fontSize: "0.85rem", textAlign: "center", padding: "2rem" }}>No admin activity logged yet.</p>
                 ) : (
                   adminLogs.map(log => (
-                    <div key={log.id} style={{ padding: "0.75rem 0", borderBottom: "1px solid #f3f4f6", fontSize: "0.8rem" }}>
+                    <div key={log.id} style={{ padding: "0.85rem 0", borderBottom: "1px solid rgba(255,255,255,0.03)", fontSize: "0.8rem" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                        <strong style={{ color: "#0f172a", textTransform: "uppercase" }}>{log.action}</strong>
-                        <span style={{ color: "#9ca3af" }}>{new Date(log.created_at).toLocaleTimeString()}</span>
+                        <strong style={{ color: "#ffffff", textTransform: "uppercase" }}>{log.action}</strong>
+                        <span style={{ color: "#64748b" }}>{new Date(log.created_at).toLocaleTimeString()}</span>
                       </div>
-                      <p style={{ margin: "0 0 4px 0", color: "#4b5563" }}>{log.details}</p>
-                      <span style={{ fontSize: "0.7rem", color: "#6b7280" }}>IP Registered: {log.ip_address || 'Internal'}</span>
+                      <p style={{ margin: "0 0 4px 0", color: "#94a3b8" }}>{log.details}</p>
+                      <span style={{ fontSize: "0.7rem", color: "#64748b" }}>IP Registered: {log.ip_address || 'Internal'}</span>
                     </div>
                   ))
                 )}
@@ -1036,53 +1104,53 @@ export default function AdminDashboardPage() {
 
         {/* Dynamic Settle Drawer/Modal Popover overlay */}
         {selectedInvoice && (
-          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
-            <div style={{ background: "white", borderRadius: "16px", padding: "2.5rem", maxWidth: "600px", width: "100%", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", position: "relative" }}>
+          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+            <div style={{ background: "#08080a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "24px", padding: "2.5rem", maxWidth: "600px", width: "100%", boxShadow: "0 30px 100px rgba(0,0,0,0.9)", position: "relative", color: "#ffffff" }}>
               
               <button 
                 onClick={() => { setSelectedInvoice(null); setDecryptedAccount(""); setReferenceNumber(""); }}
-                style={{ position: "absolute", top: "1.5rem", right: "1.5rem", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#9ca3af" }}
+                style={{ position: "absolute", top: "1.5rem", right: "1.5rem", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#64748b" }}
               >
                 &times;
               </button>
 
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>
+              <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: "0.5rem", color: "#ffffff" }}>
                 {selectedInvoice.status === 'completed' ? 'Invoice Logs Review' : 'Settle Paid Invoice Payout'}
               </h2>
-              <p style={{ fontSize: "0.85rem", color: "#6b7280", margin: "0 0 1.5rem 0" }}>
-                Invoice reference: <strong>{selectedInvoice.invoice_number}</strong>
+              <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "0 0 1.5rem 0" }}>
+                Invoice reference: <strong style={{ color: "white" }}>{selectedInvoice.invoice_number}</strong>
               </p>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "#f8fafc", padding: "1rem", borderRadius: "12px", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
                 <div>
-                  <span style={{ color: "#6b7280" }}>Client Name:</span>
-                  <div style={{ fontWeight: 600, color: "#1e293b" }}>{selectedInvoice.client_name}</div>
+                  <span style={{ color: "#64748b" }}>Client Name:</span>
+                  <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedInvoice.client_name}</div>
                 </div>
                 <div>
-                  <span style={{ color: "#6b7280" }}>Total Collected:</span>
-                  <div style={{ fontWeight: 700, color: "#16a34a" }}>
+                  <span style={{ color: "#64748b" }}>Total Collected:</span>
+                  <div style={{ fontWeight: 700, color: "#10b981" }}>
                     {selectedInvoice.amount.toLocaleString()} {selectedInvoice.currency}
                   </div>
                 </div>
               </div>
 
               {/* Bank accounts processing block */}
-              <div style={{ border: "1px solid #e5e7eb", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
-                <h4 style={{ margin: "0 0 0.75rem 0", fontSize: "0.85rem", textTransform: "uppercase", color: "#6b7280" }}>Creator Receiving Bank Wire Details</h4>
+              <div style={{ border: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.01)", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
+                <h4 style={{ margin: "0 0 0.75rem 0", fontSize: "0.8rem", textTransform: "uppercase", color: "#64748b", letterSpacing: "0.05em" }}>Creator Receiving Bank Wire Details</h4>
                 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
                   <div>
-                    <span style={{ color: "#9ca3af" }}>Bank Name:</span>
-                    <div style={{ fontWeight: 600 }}>{selectedInvoice.bank_name}</div>
+                    <span style={{ color: "#64748b" }}>Bank Name:</span>
+                    <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedInvoice.bank_name}</div>
                   </div>
                   <div>
-                    <span style={{ color: "#9ca3af" }}>Destination Country:</span>
-                    <div style={{ fontWeight: 600 }}>{selectedInvoice.bank_country}</div>
+                    <span style={{ color: "#64748b" }}>Destination Country:</span>
+                    <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedInvoice.bank_country}</div>
                   </div>
                 </div>
 
                 <div>
-                  <span style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Bank Account Number / IBAN:</span>
+                  <span style={{ color: "#64748b", fontSize: "0.85rem" }}>Bank Account Number / IBAN:</span>
                   <div style={{ display: "flex", gap: "0.5rem", marginTop: "4px" }}>
                     <input 
                       type="text" 
@@ -1090,11 +1158,13 @@ export default function AdminDashboardPage() {
                       className="form-input" 
                       style={{ 
                         flex: 1, 
-                        background: "#f1f5f9", 
-                        border: "1px solid #cbd5e1", 
+                        background: "rgba(255,255,255,0.02)", 
+                        border: "1px solid rgba(255,255,255,0.06)", 
                         fontSize: "0.85rem", 
                         fontFamily: "monospace", 
-                        padding: "0.4rem 0.6rem" 
+                        padding: "0.5rem 0.75rem",
+                        borderRadius: "8px",
+                        color: "#ffffff"
                       }}
                       value={decryptedAccount || "••••••••••••••••••••••••••••"} 
                     />
@@ -1104,14 +1174,15 @@ export default function AdminDashboardPage() {
                         onClick={() => handleDecryptBank(selectedInvoice.id)}
                         disabled={decrypting}
                         style={{ 
-                          background: "#0f172a", 
-                          color: "white", 
+                          background: "#ffffff", 
+                          color: "#000000", 
                           border: "none", 
-                          padding: "0.4rem 0.8rem", 
-                          borderRadius: "6px", 
+                          padding: "0.4rem 1rem", 
+                          borderRadius: "100px", 
                           fontSize: "0.75rem", 
-                          fontWeight: 700, 
-                          cursor: "pointer" 
+                          fontWeight: 800, 
+                          cursor: "pointer",
+                          textTransform: "uppercase"
                         }}
                       >
                         {decrypting ? "Decrypting..." : "Reveal IBAN"}
@@ -1125,24 +1196,24 @@ export default function AdminDashboardPage() {
               {selectedInvoice.status !== 'completed' ? (
                 <div>
                   <div className="form-group" style={{ marginBottom: "1rem" }}>
-                    <label className="form-label" style={{ fontWeight: 600 }}>Binance TXN ID / Wire Reference *</label>
+                    <label className="form-label" style={{ fontWeight: 600, color: "#cbd5e1", fontSize: "0.85rem", display: "block", marginBottom: "0.5rem" }}>Binance TXN ID / Wire Reference *</label>
                     <input 
                       type="text" 
                       className="form-input"
                       placeholder="Enter the wire transaction receipt reference code"
-                      style={{ padding: "0.6rem", border: "1px solid #cbd5e1", borderRadius: "8px", width: "100%" }}
+                      style={{ padding: "0.6rem 0.8rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", width: "100%", background: "rgba(255,255,255,0.02)", color: "white" }}
                       value={referenceNumber}
                       onChange={(e) => setReferenceNumber(e.target.value)}
                     />
                   </div>
 
                   <div className="form-group" style={{ marginBottom: "1.5rem" }}>
-                    <label className="form-label">Settlement Internal Notes (Optional)</label>
+                    <label className="form-label" style={{ color: "#cbd5e1", fontSize: "0.85rem", display: "block", marginBottom: "0.5rem" }}>Settlement Internal Notes (Optional)</label>
                     <textarea 
                       className="form-input"
                       rows={2}
                       placeholder="e.g. Cleared manual bank wire SEPA transfer."
-                      style={{ padding: "0.6rem", border: "1px solid #cbd5e1", borderRadius: "8px", width: "100%", fontFamily: "inherit" }}
+                      style={{ padding: "0.6rem 0.8rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", width: "100%", background: "rgba(255,255,255,0.02)", color: "white", fontFamily: "inherit" }}
                       value={settleNotes}
                       onChange={(e) => setSettleNotes(e.target.value)}
                     />
@@ -1158,9 +1229,12 @@ export default function AdminDashboardPage() {
                         color: "white", 
                         border: "none", 
                         padding: "0.8rem", 
-                        borderRadius: "8px", 
-                        fontWeight: 700, 
-                        cursor: "pointer" 
+                        borderRadius: "100px", 
+                        fontWeight: 800, 
+                        cursor: "pointer",
+                        textTransform: "uppercase",
+                        fontSize: "0.8rem",
+                        letterSpacing: "0.05em"
                       }}
                     >
                       {settling ? "Confirming Release..." : "Release Payout & Settle Invoice"}
@@ -1169,11 +1243,11 @@ export default function AdminDashboardPage() {
                     <button 
                       onClick={() => { setSelectedInvoice(null); setDecryptedAccount(""); }}
                       style={{ 
-                        background: "#f1f5f9", 
-                        color: "#475569", 
-                        border: "none", 
+                        background: "rgba(255,255,255,0.03)", 
+                        border: "1px solid rgba(255,255,255,0.05)",
+                        color: "#cbd5e1", 
                         padding: "0.8rem 1.2rem", 
-                        borderRadius: "8px", 
+                        borderRadius: "100px", 
                         fontWeight: 600, 
                         cursor: "pointer" 
                       }}
@@ -1183,7 +1257,7 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
               ) : (
-                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "1rem", borderRadius: "8px", fontSize: "0.85rem", color: "#166534" }}>
+                <div style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.15)", padding: "1.25rem", borderRadius: "12px", fontSize: "0.85rem", color: "#4ade80", lineHeight: 1.5 }}>
                   <strong>🔒 Audit Confirmed</strong>: This transaction has been fully completed. The local bank wire was successfully released.
                 </div>
               )}
@@ -1194,39 +1268,39 @@ export default function AdminDashboardPage() {
 
         {/* Dynamic CNIC Review Modal Popover overlay */}
         {selectedReviewUser && (
-          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
-            <div style={{ background: "white", borderRadius: "16px", padding: "2.5rem", maxWidth: "700px", width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", position: "relative", color: "#1e293b" }}>
+          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+            <div style={{ background: "#08080a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "24px", padding: "2.5rem", maxWidth: "700px", width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 30px 100px rgba(0,0,0,0.9)", position: "relative", color: "#ffffff" }}>
               
               <button 
                 onClick={() => setSelectedReviewUser(null)}
-                style={{ position: "absolute", top: "1.5rem", right: "1.5rem", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#9ca3af" }}
+                style={{ position: "absolute", top: "1.5rem", right: "1.5rem", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#64748b" }}
               >
                 &times;
               </button>
 
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>
+              <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: "0.5rem" }}>
                 Identity Verification Review (CNIC)
               </h2>
-              <p style={{ fontSize: "0.85rem", color: "#6b7280", margin: "0 0 1.5rem 0" }}>
+              <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "0 0 1.5rem 0" }}>
                 Review user uploaded CNIC documents and verify registration details.
               </p>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "#f8fafc", padding: "1rem", borderRadius: "12px", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
                 <div>
-                  <span style={{ color: "#6b7280" }}>Full Name:</span>
-                  <div style={{ fontWeight: 600, color: "#1e293b" }}>{selectedReviewUser.name || 'N/A'}</div>
+                  <span style={{ color: "#64748b" }}>Full Name:</span>
+                  <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedReviewUser.name || 'N/A'}</div>
                 </div>
                 <div>
-                  <span style={{ color: "#6b7280" }}>Email Address:</span>
-                  <div style={{ fontWeight: 600, color: "#1e293b" }}>{selectedReviewUser.email}</div>
+                  <span style={{ color: "#64748b" }}>Email Address:</span>
+                  <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedReviewUser.email}</div>
                 </div>
               </div>
 
               {/* Document Images Display */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "2rem" }}>
                 <div>
-                  <span style={{ color: "#475569", fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem" }}>CNIC Front Side</span>
-                  <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", background: "#f1f5f9", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  <span style={{ color: "#cbd5e1", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem", letterSpacing: "0.05em" }}>CNIC Front Side</span>
+                  <div style={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", overflow: "hidden", background: "rgba(255,255,255,0.01)", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
                     {selectedReviewUser.cnic_front ? (
                       <img 
                         src={selectedReviewUser.cnic_front} 
@@ -1234,14 +1308,14 @@ export default function AdminDashboardPage() {
                         style={{ width: "100%", height: "100%", objectFit: "contain" }} 
                       />
                     ) : (
-                      <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>No Front Image Uploaded</span>
+                      <span style={{ color: "#64748b", fontSize: "0.85rem" }}>No Front Image Uploaded</span>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <span style={{ color: "#475569", fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem" }}>CNIC Back Side</span>
-                  <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", background: "#f1f5f9", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  <span style={{ color: "#cbd5e1", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem", letterSpacing: "0.05em" }}>CNIC Back Side</span>
+                  <div style={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", overflow: "hidden", background: "rgba(255,255,255,0.01)", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
                     {selectedReviewUser.cnic_back ? (
                       <img 
                         src={selectedReviewUser.cnic_back} 
@@ -1249,14 +1323,14 @@ export default function AdminDashboardPage() {
                         style={{ width: "100%", height: "100%", objectFit: "contain" }} 
                       />
                     ) : (
-                      <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>No Back Image Uploaded</span>
+                      <span style={{ color: "#64748b", fontSize: "0.85rem" }}>No Back Image Uploaded</span>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <span style={{ color: "#475569", fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem" }}>Selfie (SN)</span>
-                  <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", background: "#f1f5f9", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  <span style={{ color: "#cbd5e1", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem", letterSpacing: "0.05em" }}>Selfie (SN)</span>
+                  <div style={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", overflow: "hidden", background: "rgba(255,255,255,0.01)", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
                     {selectedReviewUser.selfie ? (
                       <img 
                         src={selectedReviewUser.selfie} 
@@ -1264,7 +1338,7 @@ export default function AdminDashboardPage() {
                         style={{ width: "100%", height: "100%", objectFit: "contain" }} 
                       />
                     ) : (
-                      <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>No Selfie Uploaded</span>
+                      <span style={{ color: "#64748b", fontSize: "0.85rem" }}>No Selfie Uploaded</span>
                     )}
                   </div>
                 </div>
@@ -1274,14 +1348,15 @@ export default function AdminDashboardPage() {
                 <button 
                   onClick={() => handleReject(selectedReviewUser)}
                   style={{ 
-                    border: "1px solid #fca5a5", 
-                    background: "white", 
-                    color: "#dc2626", 
+                    border: "1px solid rgba(239,68,68,0.2)", 
+                    background: "rgba(239,68,68,0.05)", 
+                    color: "#f87171", 
                     padding: "0.75rem 1.5rem", 
-                    borderRadius: "8px", 
-                    fontSize: "0.85rem", 
-                    fontWeight: 600, 
-                    cursor: "pointer" 
+                    borderRadius: "100px", 
+                    fontSize: "0.8rem", 
+                    fontWeight: 700, 
+                    cursor: "pointer",
+                    textTransform: "uppercase"
                   }}
                 >
                   Reject Application
@@ -1293,10 +1368,11 @@ export default function AdminDashboardPage() {
                     background: "#10b981", 
                     color: "white", 
                     padding: "0.75rem 1.5rem", 
-                    borderRadius: "8px", 
-                    fontSize: "0.85rem", 
-                    fontWeight: 700, 
-                    cursor: "pointer" 
+                    borderRadius: "100px", 
+                    fontSize: "0.8rem", 
+                    fontWeight: 800, 
+                    cursor: "pointer",
+                    textTransform: "uppercase"
                   }}
                 >
                   Approve Verification

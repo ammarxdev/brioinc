@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 
 interface AuthUser {
@@ -23,43 +23,10 @@ const AuthContext = createContext<AuthContextType>({ user: null, loading: true }
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const fetchingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    // Check for dev bypass - only apply to administrative paths
-    const devBypassAuth =
-      process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true" &&
-      typeof window !== "undefined" &&
-      ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname) &&
-      window.location.pathname.startsWith("/admin");
-
-    if (devBypassAuth) {
-      setUser({
-        id: "d0000000-0000-0000-0000-000000000000",
-        email: "admin@brioinc.net",
-        name: "Development Admin",
-        status: "approved",
-        isVerified: true,
-        role: "admin",
-      });
-      setLoading(false);
-      return;
-    }
-
-    // Get initial session
-    const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        await fetchUserProfile(session.user.id, session.user.email, session.user.user_metadata);
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
+    // Listen for auth changes (this handles the initial session automatically on subscribe)
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         await fetchUserProfile(session.user.id, session.user.email, session.user.user_metadata);
@@ -75,6 +42,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   async function fetchUserProfile(userId: string, email: string | undefined, userMetadata?: any) {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     try {
       const { data, error } = await supabase
         .from("users")
@@ -136,9 +105,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err) {
       console.error("Error fetching user profile", err);
     } finally {
+      fetchingRef.current = false;
       setLoading(false);
     }
   }
+
 
   return (
     <AuthContext.Provider value={{ user, loading }}>

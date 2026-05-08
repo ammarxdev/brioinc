@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
@@ -9,13 +9,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
-  const router = useRouter();
+function SearchParamsHandler({ email, setEmail, setInfo }: { email: string; setEmail: (v: string) => void; setInfo: (v: string) => void }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -25,7 +19,18 @@ export default function LoginPage() {
     if (reason === "exists") {
       setInfo("Account already exists. Please sign in.");
     }
-  }, [searchParams, email]);
+  }, [searchParams, email, setEmail, setInfo]);
+
+  return null;
+}
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +72,9 @@ export default function LoginPage() {
 
   return (
     <div className="landing-container">
+      <Suspense fallback={null}>
+        <SearchParamsHandler email={email} setEmail={setEmail} setInfo={setInfo} />
+      </Suspense>
       <div className="bg-container">
         <Image src="/bio-bg.png" alt="BG" fill style={{ objectFit: 'cover', transform: 'scale(1.05)' }} priority />
         <div className="bg-overlay"></div>

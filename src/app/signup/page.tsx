@@ -1,12 +1,23 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+
+function SearchParamsHandler({ email, setEmail }: { email: string; setEmail: (v: string) => void }) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const fromQuery = searchParams.get("email");
+    if (fromQuery && !email) setEmail(fromQuery);
+  }, [searchParams, email, setEmail]);
+
+  return null;
+}
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -22,12 +33,6 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const fromQuery = searchParams.get("email");
-    if (fromQuery && !email) setEmail(fromQuery);
-  }, [searchParams, email]);
 
   const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
   const isStrongPassword = (v: string) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(v);
@@ -112,6 +117,9 @@ export default function SignupPage() {
 
   return (
     <div className="landing-container">
+      <Suspense fallback={null}>
+        <SearchParamsHandler email={email} setEmail={setEmail} />
+      </Suspense>
       <div className="bg-container">
         <Image src="/finance-bg.png" alt="BG" fill style={{ objectFit: 'cover', transform: 'scale(1.05)' }} priority />
         <div className="bg-overlay"></div>
