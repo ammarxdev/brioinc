@@ -10,7 +10,7 @@ const supabaseSystem = createClient(supabaseUrl, supabaseServiceKey);
 
 function mapNowPaymentsStatusToInternal(status: string | null | undefined) {
   const s = String(status || '').toLowerCase();
-  const successStatuses = ['finished', 'confirmed', 'sending', 'paid'];
+  const successStatuses = ['finished'];
   const pendingStatuses = ['waiting', 'confirming', 'partially_paid', 'created'];
   const failedStatuses = ['failed'];
   const expiredStatuses = ['expired'];

@@ -2,16 +2,32 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const withTimeout = async <T,>(promise: Promise<T>, ms: number) => {
+    let timer: any;
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Request timed out. Please try again.")), ms);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -54,17 +70,35 @@ export default function ResetPasswordPage() {
         throw new Error("Passwords do not match.");
       }
 
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-      });
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw new Error(sessionError.message);
+      }
+      if (!session) {
+        throw new Error("Invalid or expired password reset link. Please request a new one.");
+      }
+
+      const { error: updateError } = await withTimeout(
+        supabase.auth.updateUser({
+          password,
+        }),
+        15_000
+      );
 
       if (updateError) throw updateError;
 
       setSuccess("Password updated. Redirecting to login...");
 
+      const rawNext = searchParams.get("next") || "";
+      const next = rawNext.startsWith("/") ? rawNext : "/login";
+
       setTimeout(async () => {
         await supabase.auth.signOut();
-        router.push("/login");
+        router.push(next);
       }, 800);
     } catch (err: any) {
       setError(err.message || "Failed to update password.");

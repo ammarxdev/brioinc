@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import "./dashboard.css";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -13,6 +14,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   return (
@@ -73,6 +75,15 @@ export default function DashboardLayout({
             </svg>
             Cards
           </Link>
+
+          {user?.role === "admin" && (
+            <Link href="/admin" className={`nav-item ${pathname.startsWith('/admin') ? 'active' : ''}`} style={{ color: '#0ea5e9' }}>
+              <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              Admin Panel
+            </Link>
+          )}
         </nav>
 
         <div className="sidebar-footer">

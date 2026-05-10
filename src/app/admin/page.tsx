@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"users" | "invoices" | "audit">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "invoices" | "audit" | "create-admin">("users");
 
   // Users Tab States
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
@@ -30,6 +30,13 @@ export default function AdminDashboardPage() {
   const [adminLogs, setAdminLogs] = useState<any[]>([]);
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
 
+  // Create Admin State
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [createUserMsg, setCreateUserMsg] = useState({ type: "", text: "" });
+
   // Auth state variables
   const [adminUser, setAdminUser] = useState<any | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -37,7 +44,18 @@ export default function AdminDashboardPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [loginInfo, setLoginInfo] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+
+  const [dataLoadError, setDataLoadError] = useState("");
+
+  const [showBootstrapAdmin, setShowBootstrapAdmin] = useState(false);
+  const [bootstrapName, setBootstrapName] = useState("");
+  const [bootstrapEmail, setBootstrapEmail] = useState("");
+  const [bootstrapPassword, setBootstrapPassword] = useState("");
+  const [bootstrapOtp, setBootstrapOtp] = useState("");
+  const [bootstrapOtpSent, setBootstrapOtpSent] = useState(false);
+  const [bootstrapLoading, setBootstrapLoading] = useState(false);
 
   useEffect(() => {
     checkAdminAuth();
@@ -46,19 +64,6 @@ export default function AdminDashboardPage() {
   const checkAdminAuth = async () => {
     try {
       setCheckingAuth(true);
-
-      // Check localStorage for bypass session first
-      if (typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true") {
-        const mockAdminUser = {
-          id: "d0000000-0000-0000-0000-000000000000",
-          email: "ammarxxsaeed@gmail.com",
-          user_metadata: { name: "ammar" }
-        };
-        setAdminUser(mockAdminUser);
-        setIsAdmin(true);
-        fetchInitialData();
-        return;
-      }
 
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -90,39 +95,94 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleBootstrapSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBootstrapLoading(true);
+    setLoginError("");
+    setLoginInfo("");
+
+    try {
+      const normalizedEmail = bootstrapEmail.trim().toLowerCase();
+      if (!bootstrapName.trim()) throw new Error("Name is required.");
+      if (!normalizedEmail) throw new Error("Email is required.");
+      if (!bootstrapPassword || bootstrapPassword.trim().length < 8) {
+        throw new Error("Password must be at least 8 characters.");
+      }
+
+      const { error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: bootstrapPassword,
+        options: {
+          data: {
+            name: bootstrapName.trim(),
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      setBootstrapOtpSent(true);
+    } catch (err: any) {
+      setLoginError(err?.message || "Failed to start admin setup.");
+    } finally {
+      setBootstrapLoading(false);
+    }
+  };
+
+  const handleBootstrapVerifyOtpAndPromote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBootstrapLoading(true);
+    setLoginError("");
+    setLoginInfo("");
+
+    try {
+      const normalizedEmail = bootstrapEmail.trim().toLowerCase();
+      if (!normalizedEmail) throw new Error("Email is required.");
+      if (bootstrapOtp.trim().length < 4) throw new Error("OTP is required.");
+
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: normalizedEmail,
+        token: bootstrapOtp.trim(),
+        type: "signup",
+      });
+
+      if (error) throw error;
+      if (!data?.session?.access_token) throw new Error("No session created. Please try again.");
+
+      const res = await fetch("/api/admin/setup/promote-self", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${data.session.access_token}`,
+        },
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload?.error || "Failed to promote admin");
+      }
+
+      await checkAdminAuth();
+    } catch (err: any) {
+      setLoginError(err?.message || "Failed to verify OTP.");
+    } finally {
+      setBootstrapLoading(false);
+    }
+  };
+
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
     setLoginError("");
+    setLoginInfo("");
+    setDataLoadError("");
 
     try {
       const sanitizedUsername = email.trim().toLowerCase();
-      const isBypassUser = sanitizedUsername === "ammarxsaeed" || 
-                           sanitizedUsername === "ammarxsaeed@gmail.com" || 
-                           sanitizedUsername === "ammarxxsaeed@gmail.com";
-      const isBypassPass = password === "pakistan123..4";
-
-      if (isBypassUser && isBypassPass) {
-        console.log("Establishing administrative bypass session for:", email);
-        const mockAdminUser = {
-          id: "d0000000-0000-0000-0000-000000000000",
-          email: "ammarxxsaeed@gmail.com",
-          user_metadata: { name: "ammar" }
-        };
-        
-        if (typeof window !== "undefined") {
-          localStorage.setItem("brioinc_admin_bypass", "true");
-        }
-        
-        setAdminUser(mockAdminUser);
-        setIsAdmin(true);
-        fetchInitialData();
-        return;
-      }
+      const sanitizedPassword = password.trim();
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: sanitizedUsername,
-        password,
+        password: sanitizedPassword,
       });
 
       if (error) throw error;
@@ -153,8 +213,73 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleSendAdminResetEmail = async () => {
+    setLoginLoading(true);
+    setLoginError("");
+    setLoginInfo("");
+
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail) throw new Error("Enter your email first.");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        throw new Error("Invalid email address.");
+      }
+
+      const next = "/reset-password?next=/admin";
+      const redirectTo = `${window.location.origin}/auth/callback?type=recovery&next=${encodeURIComponent(next)}`;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
+      if (error) throw error;
+
+      setLoginInfo("Password reset email sent. Check your inbox.");
+    } catch (err: any) {
+      setLoginError(err?.message || "Failed to send reset email.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingUser(true);
+    setCreateUserMsg({ type: "", text: "" });
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("You must be logged in as an admin to create an admin account.");
+      }
+      const res = await fetch("/api/admin/admins/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
+          email: newUserEmail,
+          password: newUserPassword,
+          name: newUserName,
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create admin");
+
+      setCreateUserMsg({ type: "success", text: "Admin account created successfully!" });
+      setNewUserEmail("");
+      setNewUserPassword("");
+      setNewUserName("");
+      fetchPendingUsers();
+    } catch (err: any) {
+      setCreateUserMsg({ type: "error", text: err.message });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   const fetchInitialData = async () => {
     setLoading(true);
+    setDataLoadError("");
     await Promise.all([
       fetchPendingUsers(),
       fetchInvoices(),
@@ -164,35 +289,6 @@ export default function AdminDashboardPage() {
   };
 
   const fetchPendingUsers = async () => {
-    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-    if (isBypass) {
-      setPendingUsers([
-        {
-          id: "mock-user-1",
-          submission_id: "mock-sub-1",
-          user_id: "mock-uid-1",
-          name: "Muhammad Ali",
-          email: "m.ali@fastmail.com",
-          status: "pending",
-          cnic_front: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
-          cnic_back: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80",
-          selfie: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"
-        },
-        {
-          id: "mock-user-2",
-          submission_id: "mock-sub-2",
-          user_id: "mock-uid-2",
-          name: "Sara Khan",
-          email: "sara.khan@gmail.com",
-          status: "pending",
-          cnic_front: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80",
-          cnic_back: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=600&q=80",
-          selfie: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80"
-        }
-      ]);
-      return;
-    }
-
     try {
       const {
         data: { session },
@@ -231,99 +327,41 @@ export default function AdminDashboardPage() {
       setPendingUsers(mapped);
     } catch (err) {
       console.warn("Error fetching real users:", err);
+      setDataLoadError((prev) => prev || (err as any)?.message || "Failed to fetch pending KYC");
       setPendingUsers([]);
     }
   };
 
   const fetchInvoices = async () => {
-    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-    if (isBypass) {
-      setInvoices([
-        {
-          id: "mock-inv-1",
-          invoice_number: "INV-2026-0041",
-          client_name: "Binance Corporate Europe",
-          client_email: "treasury@binance.com",
-          amount: 250000,
-          currency: "EUR",
-          status: "paid",
-          bank_name: "Deutsche Bank AG",
-          bank_country: "Germany",
-          created_at: new Date(Date.now() - 3600000 * 2).toISOString()
-        },
-        {
-          id: "mock-inv-2",
-          invoice_number: "INV-2026-0042",
-          client_name: "Apex Clearing Asia",
-          client_email: "settlements@apex.sg",
-          amount: 145000,
-          currency: "USD",
-          status: "completed",
-          bank_name: "DBS Bank",
-          bank_country: "Singapore",
-          created_at: new Date(Date.now() - 3600000 * 24).toISOString()
-        },
-        {
-          id: "mock-inv-3",
-          invoice_number: "INV-2026-0043",
-          client_name: "Galaxy Digital LP",
-          client_email: "treasury@galaxydigital.io",
-          amount: 89000,
-          currency: "GBP",
-          status: "pending",
-          bank_name: "Barclays Bank PLC",
-          bank_country: "United Kingdom",
-          created_at: new Date(Date.now() - 3600000 * 48).toISOString()
-        }
-      ]);
-      return;
-    }
-
     try {
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("*")
-        .order("created_at", { ascending: false });
-        
-      if (error) throw error;
-      setInvoices(data || []);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const headers: any = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch("/api/admin/invoices/list", {
+        method: "GET",
+        headers,
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload?.error || "Failed to fetch invoices");
+      }
+
+      setInvoices(payload?.invoices || []);
     } catch (err) {
       console.error("Error fetching invoices:", err);
+      setDataLoadError((prev) => prev || (err as any)?.message || "Failed to fetch invoices");
+      setInvoices([]);
     }
   };
 
   const fetchAuditLogs = async () => {
-    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-    if (isBypass) {
-      setAdminLogs([
-        {
-          id: "mock-admin-log-1",
-          action: "decrypt-bank",
-          details: "Decrypted receiving bank IBAN details for INV-2026-0042",
-          created_at: new Date(Date.now() - 1200000).toISOString(),
-          ip_address: "192.168.1.144"
-        },
-        {
-          id: "mock-admin-log-2",
-          action: "complete-settlement",
-          details: "Released manual bank wire payout SEPA for INV-2026-0042 (Ref: TXN-9021-X)",
-          created_at: new Date(Date.now() - 3600000 * 4).toISOString(),
-          ip_address: "192.168.1.144"
-        }
-      ]);
-      setEmailLogs([
-        {
-          id: "mock-email-log-1",
-          recipient: "treasury@binance.com",
-          status: "sent",
-          subject: "Brioinc Global Payout Settlement Confirmation",
-          action: "settlement_success",
-          created_at: new Date(Date.now() - 1200000).toISOString()
-        }
-      ]);
-      return;
-    }
-
     try {
       const [adminRes, emailRes] = await Promise.all([
         supabase.from("admin_logs").select("*").order("created_at", { ascending: false }).limit(50),
@@ -338,15 +376,11 @@ export default function AdminDashboardPage() {
   };
 
   const handleApprove = async (user: any) => {
-    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-    if (isBypass) {
-      setPendingUsers(prev => prev.filter(u => u.id !== user.id));
-      alert(`User ${user.name || 'User'} approved successfully (Bypass Mode).`);
-      setSelectedReviewUser(null);
-      return;
-    }
-
     try {
+      if (!user?.submission_id) {
+        throw new Error("Missing submission id. Please refresh the page and try again.");
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -354,6 +388,8 @@ export default function AdminDashboardPage() {
       if (!session?.access_token) {
         throw new Error("Unauthorized");
       }
+
+      setLoading(true);
 
       const res = await fetch("/api/admin/kyc/decision", {
         method: "POST",
@@ -370,25 +406,25 @@ export default function AdminDashboardPage() {
       }
 
       setSelectedReviewUser(null);
-      fetchPendingUsers();
-      fetchAuditLogs();
+      await Promise.all([fetchPendingUsers(), fetchAuditLogs()]);
     } catch (err) {
       console.error("Failed to approve user:", err);
+      const msg = (err as any)?.message || "Failed to approve";
+      setDataLoadError((prev) => prev || msg);
+      alert(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleReject = async (user: any) => {
     if (!window.confirm("Are you sure you want to reject this user?")) return;
     
-    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-    if (isBypass) {
-      setPendingUsers(prev => prev.filter(u => u.id !== user.id));
-      alert(`User ${user.name || 'User'} rejected successfully (Bypass Mode).`);
-      setSelectedReviewUser(null);
-      return;
-    }
-
     try {
+      if (!user?.submission_id) {
+        throw new Error("Missing submission id. Please refresh the page and try again.");
+      }
+
       const reason = window.prompt("Rejection reason (shown to user):", "Document unclear / mismatch") || "";
       if (reason.trim().length < 3) {
         alert("Rejection reason is required.");
@@ -402,6 +438,8 @@ export default function AdminDashboardPage() {
       if (!session?.access_token) {
         throw new Error("Unauthorized");
       }
+
+      setLoading(true);
 
       const res = await fetch("/api/admin/kyc/decision", {
         method: "POST",
@@ -418,10 +456,14 @@ export default function AdminDashboardPage() {
       }
 
       setSelectedReviewUser(null);
-      fetchPendingUsers();
-      fetchAuditLogs();
+      await Promise.all([fetchPendingUsers(), fetchAuditLogs()]);
     } catch (err) {
       console.error("Failed to reject user:", err);
+      const msg = (err as any)?.message || "Failed to reject";
+      setDataLoadError((prev) => prev || msg);
+      alert(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -429,26 +471,20 @@ export default function AdminDashboardPage() {
   const handleDecryptBank = async (invoiceId: string) => {
     if (!adminUser) return;
     
-    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-    if (isBypass) {
-      setDecrypting(true);
-      setTimeout(() => {
-        setDecryptedAccount("PK92BAHL00002008316492");
-        setDecrypting(false);
-      }, 600);
-      return;
-    }
-
     try {
       setDecrypting(true);
       setDecryptedAccount("");
 
+      const { data: { session } } = await supabase.auth.getSession();
+
       const res = await fetch('/api/admin/settle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({
           action: 'decrypt-bank',
-          adminId: adminUser.id,
           invoiceId
         }),
       });
@@ -474,26 +510,19 @@ export default function AdminDashboardPage() {
       return;
     }
 
-    const isBypass = typeof window !== "undefined" && localStorage.getItem("brioinc_admin_bypass") === "true";
-    if (isBypass) {
-      setInvoices(prev => prev.map(inv => inv.id === selectedInvoice.id ? { ...inv, status: 'completed' } : inv));
-      alert("Manual bank wire payout released successfully (Bypass Mode).");
-      setSelectedInvoice(null);
-      setReferenceNumber("");
-      setSettleNotes("");
-      setDecryptedAccount("");
-      return;
-    }
-
     try {
       setSettling(true);
 
+      const { data: { session } } = await supabase.auth.getSession();
+
       const res = await fetch('/api/admin/settle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({
           action: 'complete-settlement',
-          adminId: adminUser.id,
           invoiceId: selectedInvoice.id,
           referenceNumber,
           notes: settleNotes
@@ -566,7 +595,7 @@ export default function AdminDashboardPage() {
     return matchesSearch && matchesStatus;
   });
 
-  if (checkingAuth) {
+  if (checkingAuth || isAdmin === null) {
     return (
       <div className="admin-login-bg" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: '1.5rem' }}>
         <div className="spinner"></div>
@@ -584,7 +613,7 @@ export default function AdminDashboardPage() {
 
   if (!isAdmin) {
     return (
-      <div className="admin-login-bg" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '1rem' }}>
+      <div className="admin-login-bg">
         <div className="admin-login-card">
           <div className="lock-icon-box">
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -597,38 +626,129 @@ export default function AdminDashboardPage() {
           <p className="login-subtitle">Brioinc Multi-Asset Settlement System</p>
 
           {loginError && <div className="login-error">{loginError}</div>}
+          {loginInfo && <div className="login-info">{loginInfo}</div>}
 
-          <form onSubmit={handleAdminLogin} className="login-form">
-            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label className="login-label">Email Username</label>
-              <input 
-                type="text" 
-                required 
-                placeholder="operator@brioinc.net" 
-                className="login-input" 
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+          {!showBootstrapAdmin ? (
+            <>
+              <form onSubmit={handleAdminLogin} className="login-form">
+                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                  <label className="login-label">Email Username</label>
+                  <input 
+                    type="email" 
+                    required 
+                    placeholder="operator@brioinc.net" 
+                    className="login-input" 
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
 
-            <div className="form-group" style={{ marginBottom: '2.5rem' }}>
-              <label className="login-label">Access Token / Password</label>
-              <input 
-                type="password" 
-                required 
-                placeholder="••••••••••••" 
-                className="login-input" 
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+                <div className="form-group" style={{ marginBottom: '2.5rem' }}>
+                  <label className="login-label">Access Token / Password</label>
+                  <input 
+                    type="password" 
+                    required 
+                    placeholder="••••••••••••" 
+                    className="login-input" 
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
 
-            <button type="submit" disabled={loginLoading} className="login-btn">
-              {loginLoading ? "Verifying Clearance..." : "Establish Secure Session"}
-            </button>
-          </form>
+                <button type="submit" disabled={loginLoading} className="login-btn">
+                  {loginLoading ? "Verifying Clearance..." : "Establish Secure Session"}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={loginLoading}
+                  className="login-btn"
+                  style={{ marginTop: '1rem', background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8" }}
+                  onClick={handleSendAdminResetEmail}
+                >
+                  Reset Password
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              {!bootstrapOtpSent ? (
+                <form onSubmit={handleBootstrapSendOtp} className="login-form">
+                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                    <label className="login-label">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      className="login-input"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
+                      value={bootstrapName}
+                      onChange={(e) => setBootstrapName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                    <label className="login-label">Email</label>
+                    <input
+                      type="email"
+                      required
+                      className="login-input"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
+                      value={bootstrapEmail}
+                      onChange={(e) => setBootstrapEmail(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '2rem' }}>
+                    <label className="login-label">Password</label>
+                    <input
+                      type="password"
+                      required
+                      className="login-input"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
+                      value={bootstrapPassword}
+                      onChange={(e) => setBootstrapPassword(e.target.value)}
+                    />
+                  </div>
+
+                  <button type="submit" disabled={bootstrapLoading} className="login-btn">
+                    {bootstrapLoading ? "Sending OTP..." : "Send OTP"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="login-btn"
+                    style={{ marginTop: '1rem', background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8" }}
+                    onClick={() => {
+                      setShowBootstrapAdmin(false);
+                      setLoginError("");
+                    }}
+                  >
+                    Back to Login
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleBootstrapVerifyOtpAndPromote} className="login-form">
+                  <div className="form-group" style={{ marginBottom: '2rem' }}>
+                    <label className="login-label">OTP Code</label>
+                    <input
+                      type="text"
+                      required
+                      className="login-input"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
+                      value={bootstrapOtp}
+                      onChange={(e) => setBootstrapOtp(e.target.value)}
+                    />
+                  </div>
+
+                  <button type="submit" disabled={bootstrapLoading} className="login-btn">
+                    {bootstrapLoading ? "Verifying..." : "Verify OTP & Create Admin"}
+                  </button>
+                </form>
+              )}
+            </>
+          )}
           
           <div className="login-footer">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -686,6 +806,17 @@ export default function AdminDashboardPage() {
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.15);
             color: #f87171;
+            padding: 0.85rem;
+            border-radius: 0.75rem;
+            font-size: 0.8rem;
+            margin-bottom: 2rem;
+            text-align: left;
+            line-height: 1.4;
+          }
+          .login-info {
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.18);
+            color: #4ade80;
             padding: 0.85rem;
             border-radius: 0.75rem;
             font-size: 0.8rem;
@@ -768,9 +899,6 @@ export default function AdminDashboardPage() {
               className="btn-header btn-header-dark" 
               onClick={async () => {
                 await supabase.auth.signOut();
-                if (typeof window !== "undefined") {
-                  localStorage.removeItem("brioinc_admin_bypass");
-                }
                 setIsAdmin(false);
                 setAdminUser(null);
               }}
@@ -833,7 +961,39 @@ export default function AdminDashboardPage() {
           >
             System Logs & Audit
           </button>
+          <button 
+            onClick={() => setActiveTab("create-admin")}
+            style={{ 
+              padding: "0.75rem 1rem", 
+              background: "none", 
+              border: "none", 
+              borderBottom: activeTab === "create-admin" ? "2px solid #ffffff" : "2px solid transparent", 
+              fontWeight: activeTab === "create-admin" ? 700 : 500, 
+              color: activeTab === "create-admin" ? "#ffffff" : "#64748b", 
+              cursor: "pointer",
+              fontSize: "0.9rem"
+            }}
+          >
+            Create Admin
+          </button>
         </div>
+
+        {dataLoadError && (
+          <div
+            style={{
+              marginBottom: "1.25rem",
+              padding: "0.9rem 1rem",
+              borderRadius: "12px",
+              border: "1px solid rgba(239, 68, 68, 0.25)",
+              background: "rgba(239, 68, 68, 0.06)",
+              color: "#fca5a5",
+              fontSize: "0.85rem",
+              lineHeight: 1.5,
+            }}
+          >
+            {dataLoadError}
+          </div>
+        )}
 
         {/* Tab Panel contents */}
         {activeTab === "users" && (
@@ -1383,6 +1543,79 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
+        {/* Tab 4: Create User */}
+        {activeTab === "create-admin" && (
+          <div className="tab-container" style={{ maxWidth: "600px", margin: "0 auto" }}>
+            <div className="section-card">
+              <h2 className="section-title">Create Admin Account</h2>
+              <p className="section-subtitle">Provision a new administrator account.</p>
+              
+              {createUserMsg.text && (
+                <div style={{ 
+                  padding: "1rem", 
+                  borderRadius: "0.5rem", 
+                  marginBottom: "1.5rem", 
+                  backgroundColor: createUserMsg.type === "success" ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                  color: createUserMsg.type === "success" ? "#4ade80" : "#f87171",
+                  border: `1px solid ${createUserMsg.type === "success" ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)"}`,
+                  fontSize: "0.9rem"
+                }}>
+                  {createUserMsg.text}
+                </div>
+              )}
+
+              <form onSubmit={handleCreateAdmin} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                <div className="form-group">
+                  <label className="login-label">Full Name</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="John Doe" 
+                    className="login-input" 
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "white" }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="login-label">Email Address</label>
+                  <input 
+                    type="email" 
+                    required 
+                    placeholder="user@example.com" 
+                    className="login-input" 
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "white" }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="login-label">Initial Password</label>
+                  <input 
+                    type="password" 
+                    required 
+                    placeholder="••••••••••••" 
+                    className="login-input" 
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "white" }}
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={creatingUser} 
+                  className="login-btn"
+                  style={{ marginTop: "1rem" }}
+                >
+                  {creatingUser ? "Provisioning..." : "Create Admin Account"}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
   );
 }

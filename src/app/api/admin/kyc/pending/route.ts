@@ -15,24 +15,20 @@ export async function GET(req: Request) {
 
   try {
     let requestUser = await getRequestUser(req);
-    const devBypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true";
-
-    if (!requestUser && !devBypass) {
+    if (!requestUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const supabase = createSupabaseServiceServerClient();
 
-    if (!devBypass && requestUser) {
-      const { data: adminProfile, error: adminErr } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", requestUser.id)
-        .maybeSingle();
+    const { data: adminProfile, error: adminErr } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", requestUser.id)
+      .maybeSingle();
 
-      if (adminErr || adminProfile?.role !== "admin") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
+    if (adminErr || adminProfile?.role !== "admin") {
+      return NextResponse.json({ error: adminErr?.message || "Forbidden" }, { status: 403 });
     }
 
     const { data, error } = await supabase
@@ -43,7 +39,10 @@ export async function GET(req: Request) {
       .order("submitted_at", { ascending: true });
 
     if (error) {
-      return NextResponse.json({ error: "Failed to fetch pending submissions" }, { status: 500 });
+      return NextResponse.json(
+        { error: error?.message || "Failed to fetch pending submissions" },
+        { status: 500 }
+      );
     }
 
     const rows = await Promise.all(

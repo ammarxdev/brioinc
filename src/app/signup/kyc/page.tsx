@@ -2,21 +2,25 @@
 
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { useSearchParams } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export default function KYCPage() {
   const { user, loading } = useAuth();
-  const [step, setStep] = useState(1); // 1 = OTP Verification, 2 = KYC Document Uploads
+  const searchParams = useSearchParams();
+  const [step, setStep] = useState(user ? 2 : 1); // If user is already logged in, they've verified their email, so start at Step 2.
   
   // OTP States
   const [otpCode, setOtpCode] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
+
+  const emailFromQuery = (searchParams.get("email") || "").trim().toLowerCase();
+  const otpEmail = (emailFromQuery || user?.email || "").trim().toLowerCase();
 
   // KYC Upload States
   const [cnicFrontFile, setCnicFrontFile] = useState<File | null>(null);
@@ -41,80 +45,103 @@ export default function KYCPage() {
     }
   }, [user?.status]);
 
-  // Send OTP automatically when user profile/email loads
-  useEffect(() => {
-    if (user?.email && !otpSent && !sendingOtp && user?.status === 'kyc_required') {
-      sendOTP();
+  const sendOTP = useCallback(async () => {
+    if (!otpEmail) {
+      setMsg({ type: "error", text: "Missing email. Please go back and enter your email again." });
+      return;
     }
-  }, [user?.email, user?.status]);
-
-  const sendOTP = async () => {
-    if (!user?.email) return;
     setSendingOtp(true);
     setMsg({ type: "", text: "" });
     try {
-      // Try to resend the signup confirmation code first
-      const { error: resendError } = await supabase.auth.resend({
+      const { error } = await supabase.auth.resend({
         type: 'signup',
-        email: user.email,
+        email: otpEmail,
       });
-
-      if (resendError) {
-        console.log("Resend signup code failed, attempting signInWithOtp:", resendError.message);
-        // Fallback: request a login OTP code (magiclink/OTP)
-        const { error: otpError } = await supabase.auth.signInWithOtp({
-          email: user.email,
-        });
-        if (otpError) throw otpError;
+      
+      if (error) {
+        throw error;
       }
 
       setOtpSent(true);
-      setMsg({ type: "success", text: `Verification code sent to ${user.email} via Supabase!` });
+      setMsg({ type: "success", text: `Verification code sent to ${otpEmail}!` });
     } catch (err: any) {
       console.error(err);
       setMsg({ type: "error", text: err.message || "Failed to send verification code." });
     } finally {
       setSendingOtp(false);
     }
-  };
+  }, [otpEmail]);
 
-  const handleVerifyOTP = async () => {
-    if (!user?.email) return;
-    setMsg({ type: "", text: "" });
-    try {
-      let isVerified = false;
 
-      // First try to verify as a signup confirmation OTP
-      let { error } = await supabase.auth.verifyOtp({
-        email: user.email,
-        token: otpCode,
-        type: 'signup',
-      });
 
-      if (!error) {
-        isVerified = true;
-      } else {
-        console.log("Verify signup OTP failed, attempting email OTP:", error.message);
-        // Fallback: verify as an email login OTP
-        const fallbackRes = await supabase.auth.verifyOtp({
-          email: user.email,
-          token: otpCode,
-          type: 'email',
-        });
+  useEffect(() => {
+    let mounted = true;
 
-        if (!fallbackRes.error) {
-          isVerified = true;
-        } else {
-          // If both fail, check for developer bypass master code
-          if (otpCode === "123456") {
-            isVerified = true;
-          } else {
-            throw fallbackRes.error;
-          }
+    const run = async () => {
+      if (step !== 1) return;
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user) return;
+
+      const storedProfile = typeof window !== "undefined" ? localStorage.getItem("brioinc_pending_signup_profile") : null;
+      if (storedProfile) {
+        const profile = JSON.parse(storedProfile);
+
+        const { error: profileErr } = await supabase
+          .from("users")
+          .update({
+            name: `${profile.firstName} ${profile.lastName}`.trim(),
+            first_name: profile.firstName,
+            last_name: profile.lastName,
+            date_of_birth: profile.dateOfBirth,
+            phone: profile.phone,
+            address: profile.address,
+            status: "kyc_required",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", session.user.id);
+
+        if (profileErr) {
+          setMsg({ type: "error", text: profileErr.message || "Failed to update your profile." });
+          return;
+        }
+
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("brioinc_pending_signup_profile");
         }
       }
 
-      if (isVerified) {
+      if (!mounted) return;
+
+      setStep(2);
+      setMsg((prev) => (prev.text ? prev : { type: "success", text: "Email verified successfully! Please upload your documents." }));
+    };
+
+    run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [step]);
+
+  const handleVerifyOTP = async () => {
+    if (!otpEmail) {
+      setMsg({ type: "error", text: "Missing email. Please go back and enter your email again." });
+      return;
+    }
+    setMsg({ type: "", text: "" });
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: otpEmail,
+        token: otpCode,
+        type: 'signup'
+      });
+      
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
         // Retrieve and write the user profile details only now that OTP is verified
         const storedProfile = typeof window !== "undefined" ? localStorage.getItem("brioinc_pending_signup_profile") : null;
         if (storedProfile) {
@@ -132,7 +159,7 @@ export default function KYCPage() {
               status: "kyc_required",
               updated_at: new Date().toISOString(),
             })
-            .eq("id", user.id);
+            .eq("id", data.user.id);
 
           if (profileErr) throw profileErr;
           
@@ -143,6 +170,8 @@ export default function KYCPage() {
 
         setStep(2); // Go to step 3 (KYC details)
         setMsg({ type: "success", text: "Email verified successfully! Please upload your documents." });
+      } else {
+        throw new Error("Verification succeeded but no user session was created. Please try again.");
       }
     } catch (err: any) {
       console.error(err);
@@ -257,7 +286,7 @@ export default function KYCPage() {
               // STEP 2: Email OTP Verification Screen
               <>
                 <h1>Verify your email</h1>
-                <p className="subtitle">Step 2: Enter the 6-digit verification code sent to <strong>{user?.email || "your inbox"}</strong>.</p>
+                <p className="subtitle">Step 2: Enter the 6-digit verification code sent to <strong>{otpEmail || "your inbox"}</strong>.</p>
 
                 {msg.text && (
                   <div className={msg.type === "error" ? "error-alert" : "success-alert"}>
@@ -288,7 +317,7 @@ export default function KYCPage() {
                     Didn't receive the code?{" "}
                     <button 
                       onClick={sendOTP} 
-                      disabled={sendingOtp || !user?.email}
+                      disabled={sendingOtp || !otpEmail}
                       className="resend-link"
                     >
                       {sendingOtp ? "Sending code..." : "Resend OTP"}

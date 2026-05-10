@@ -97,6 +97,8 @@ export async function POST(req: Request) {
       throw createInvoiceErr;
     }
 
+    const payPageUrl = `${siteUrl}/invoices/pay/${invoiceData.id}`;
+
     // 3. Request Dynamic NowPayments Invoice Link
     const paymentSetup = await createNowPaymentsInvoice({
       amount: parseFloat(amount),
@@ -104,6 +106,9 @@ export async function POST(req: Request) {
       invoiceNumber,
       description,
       siteUrl,
+      successUrl: payPageUrl,
+      cancelUrl: payPageUrl,
+      partiallyPaidUrl: payPageUrl,
     });
 
     if (!paymentSetup.success && !paymentSetup.isMock) {
@@ -152,8 +157,6 @@ export async function POST(req: Request) {
     }
 
     // 5. Trigger Transactional Email notification to Client (Non-blocking background thread)
-    const payPageUrl = `${siteUrl}/invoices/pay/${updatedInvoice.id}`;
-    
     sendInvoiceCreatedEmail({
       to: clientEmail,
       clientName: clientName || 'Valued Partner',

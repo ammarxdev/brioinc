@@ -15,12 +15,18 @@ export async function createNowPaymentsInvoice({
   invoiceNumber,
   description,
   siteUrl,
+  successUrl,
+  cancelUrl,
+  partiallyPaidUrl,
 }: {
   amount: number;
   currency?: string;
   invoiceNumber: string;
   description: string;
   siteUrl: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  partiallyPaidUrl?: string;
 }) {
   try {
     if (!NOWPAYMENTS_API_KEY) {
@@ -33,8 +39,9 @@ export async function createNowPaymentsInvoice({
       order_id: invoiceNumber,
       order_description: description,
       ipn_callback_url: `${siteUrl}/api/webhooks/nowpayments`,
-      success_url: `${siteUrl}/dashboard`,
-      cancel_url: `${siteUrl}/dashboard`,
+      success_url: successUrl || `${siteUrl}/dashboard`,
+      cancel_url: cancelUrl || `${siteUrl}/dashboard`,
+      partially_paid_url: partiallyPaidUrl || successUrl || `${siteUrl}/dashboard`,
     };
 
     const response = await axios.post(`${NOWPAYMENTS_API_URL}/invoice`, payload, {
@@ -54,7 +61,7 @@ export async function createNowPaymentsInvoice({
     };
   } catch (error: any) {
     console.error('NowPayments API createInvoice Error:', error.response?.data || error.message);
-    
+
     const isProduction = process.env.NODE_ENV === 'production';
     if (isProduction) {
       return {
@@ -76,6 +83,65 @@ export async function createNowPaymentsInvoice({
   }
 }
 
+export async function createNowPaymentsPayment({
+  amount,
+  currency = 'USD',
+  payCurrency,
+  invoiceNumber,
+  description,
+  siteUrl,
+}: {
+  amount: number;
+  currency?: string;
+  payCurrency: string;
+  invoiceNumber: string;
+  description: string;
+  siteUrl: string;
+}) {
+  try {
+    if (!NOWPAYMENTS_API_KEY) {
+      throw new Error('NOWPAYMENTS_API_KEY is not configured');
+    }
+
+    const payload = {
+      price_amount: amount,
+      price_currency: currency.toLowerCase(),
+      pay_currency: payCurrency.toLowerCase(),
+      order_id: invoiceNumber,
+      order_description: description,
+      ipn_callback_url: `${siteUrl}/api/webhooks/nowpayments`,
+    };
+
+    const response = await axios.post(`${NOWPAYMENTS_API_URL}/payment`, payload, {
+      headers: {
+        'x-api-key': NOWPAYMENTS_API_KEY,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return {
+      success: true,
+      paymentId: response.data.payment_id,
+      paymentStatus: response.data.payment_status,
+      payAddress: response.data.pay_address,
+      payinExtraId: response.data.payin_extra_id,
+      payAmount: response.data.pay_amount,
+      payCurrency: response.data.pay_currency,
+      priceAmount: response.data.price_amount,
+      priceCurrency: response.data.price_currency,
+      orderId: response.data.order_id,
+      invoiceId: response.data.invoice_id,
+    };
+  } catch (error: any) {
+    console.error('NowPayments API createPayment Error:', error.response?.data || error.message);
+
+    return {
+      success: false,
+      error: error.response?.data || error.message,
+    };
+  }
+}
+
 /**
  * Verifies NOWPayments IPN webhook signature to prevent spoofing.
  */
@@ -86,28 +152,26 @@ export function verifyNowPaymentsSignature(
 ): boolean {
   if (!receivedSignature || !body) return false;
   try {
-    // 1. Sort the keys of the JSON body alphabetically
-    const sortedKeys = Object.keys(body).sort();
-    
-    // 2. Build the alphabetically sorted object
-    const sortedObj: Record<string, any> = {};
-    sortedKeys.forEach((key) => {
-      sortedObj[key] = body[key];
-    });
+    const sortObject = (obj: any): any => {
+      if (!obj || typeof obj !== 'object') return obj;
+      if (Array.isArray(obj)) return obj.map((v) => sortObject(v));
+      return Object.keys(obj)
+        .sort()
+        .reduce((result: Record<string, any>, key) => {
+          result[key] = obj[key] && typeof obj[key] === 'object' ? sortObject(obj[key]) : obj[key];
+          return result;
+        }, {});
+    };
 
-    // 3. Stringify the sorted object (matching NowPayments encoding)
-    const stringifiedBody = JSON.stringify(sortedObj);
+    const stringifiedBody = JSON.stringify(sortObject(body));
 
-    // 4. Calculate HMAC-SHA512 of stringified body using IPN Secret
     const hmac = crypto.createHmac('sha512', ipnSecret);
     hmac.update(stringifiedBody);
     const calculatedSignature = hmac.digest('hex');
 
     // 5. Secure constant-time comparison to prevent timing attacks
-    return crypto.timingSafeEqual(
-      Buffer.from(calculatedSignature, 'hex'),
-      Buffer.from(receivedSignature, 'hex')
-    );
+    if (calculatedSignature.length !== receivedSignature.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(calculatedSignature, 'hex'), Buffer.from(receivedSignature, 'hex'));
   } catch (error) {
     console.error('Signature verification error:', error);
     return false;

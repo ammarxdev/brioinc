@@ -107,7 +107,7 @@ export default function SignupPage() {
         }));
       }
 
-      router.push("/signup/kyc");
+      router.push(`/signup/kyc?email=${encodeURIComponent(normalizedEmail)}`);
     } catch (err: any) {
       setError(err.message || "Failed to create account.");
     } finally {

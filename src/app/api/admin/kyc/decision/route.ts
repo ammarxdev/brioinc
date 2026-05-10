@@ -18,16 +18,6 @@ export async function POST(req: Request) {
 
   try {
     let requestUser = await getRequestUser(req);
-    const devBypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true";
-
-    if (!requestUser && !devBypass) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (!requestUser && devBypass) {
-      requestUser = { id: "d0000000-0000-0000-0000-000000000000" } as any;
-    }
-
     if (!requestUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -47,21 +37,19 @@ export async function POST(req: Request) {
 
     const supabase = createSupabaseServiceServerClient();
 
-    if (!devBypass && requestUser) {
-      const { data: adminProfile, error: adminErr } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", requestUser.id)
-        .maybeSingle();
+    const { data: adminProfile, error: adminErr } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", requestUser.id)
+      .maybeSingle();
 
-      if (adminErr || adminProfile?.role !== "admin") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
+    if (adminErr || adminProfile?.role !== "admin") {
+      return NextResponse.json({ error: adminErr?.message || "Forbidden" }, { status: 403 });
     }
 
     const { data: submission, error: submissionErr } = await supabase
       .from("kyc_submissions")
-      .select("id,user_id,status,is_current,users:users(id,email,name,first_name,last_name)")
+      .select("id,user_id,status,is_current,users:users!kyc_submissions_user_id_fkey(id,email,name,first_name,last_name)")
       .eq("id", submissionId)
       .maybeSingle();
 
@@ -88,7 +76,10 @@ export async function POST(req: Request) {
       .eq("id", submissionId);
 
     if (updateSubmissionErr) {
-      return NextResponse.json({ error: "Failed to update submission" }, { status: 500 });
+      return NextResponse.json(
+        { error: updateSubmissionErr?.message || "Failed to update submission" },
+        { status: 500 }
+      );
     }
 
     const { error: updateUserErr } = await supabase
@@ -102,7 +93,10 @@ export async function POST(req: Request) {
       .eq("id", submission.user_id);
 
     if (updateUserErr) {
-      return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
+      return NextResponse.json(
+        { error: updateUserErr?.message || "Failed to update user" },
+        { status: 500 }
+      );
     }
 
     const details =

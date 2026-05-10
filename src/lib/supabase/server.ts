@@ -9,6 +9,10 @@ export function createSupabaseAnonServerClient() {
 }
 
 export function createSupabaseServiceServerClient() {
-  const key = supabaseServiceKey || supabaseAnonKey;
-  return createClient(supabaseUrl, key);
+  if (!supabaseServiceKey) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY is missing. Add it to your environment variables and restart the server."
+    );
+  }
+  return createClient(supabaseUrl, supabaseServiceKey);
 }

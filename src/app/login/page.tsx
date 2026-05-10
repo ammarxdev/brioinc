@@ -27,7 +27,10 @@ function SearchParamsHandler({ email, setEmail, setInfo }: { email: string; setE
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sendingOTP, setSendingOTP] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const router = useRouter();
@@ -70,6 +73,59 @@ export default function LoginPage() {
     }
   };
 
+  const handleSendOTP = async () => {
+    setSendingOTP(true);
+    setError("");
+    setInfo("");
+
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail) throw new Error("Email is required.");
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: normalizedEmail,
+        options: {
+          shouldCreateUser: false,
+        },
+      });
+
+      if (error) throw error;
+
+      setOtpSent(true);
+      setInfo(`Check ${normalizedEmail} for a 6-digit login code.`);
+    } catch (err: any) {
+      setError(err.message || "Failed to send OTP.");
+    } finally {
+      setSendingOTP(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setInfo("");
+
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: normalizedEmail,
+        token: otpCode,
+        type: 'magiclink'
+      });
+
+      if (error) throw error;
+      if (!data?.session) throw new Error("Sign-in failed. Please try again.");
+
+      console.log("OTP Login successful! Redirecting to /dashboard...");
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Failed to verify OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="landing-container">
       <Suspense fallback={null}>
@@ -98,25 +154,61 @@ export default function LoginPage() {
           {error && <div className="error-alert">{error}</div>}
           {info && <div className="success-alert">{info}</div>}
 
-          <form onSubmit={handleLogin} className="login-form">
-            <div className="form-group">
-              <label>Email Address</label>
-              <input type="email" placeholder="name@company.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
+          {otpSent ? (
+            <form onSubmit={handleVerifyOTP} className="login-form">
+              <div className="form-group">
+                <label>Verification Code</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="000000"
+                  required
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                  style={{ textAlign: 'center', fontSize: '2rem', letterSpacing: '0.5rem', fontWeight: 800 }}
+                />
+              </div>
 
-            <div className="form-group">
-              <label>Password</label>
-              <input type="password" placeholder="Enter your password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
+              <button type="submit" className="submit-btn" disabled={loading || otpCode.length !== 6}>
+                {loading ? "Verifying..." : "Verify & Sign In"}
+              </button>
 
-            <button type="submit" className="submit-btn" disabled={loading}>
-              {loading ? "Signing In..." : "Sign In"}
-            </button>
+              <p className="bottom-link">
+                <button type="button" onClick={() => setOtpSent(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.9rem' }}>
+                  Use password instead
+                </button>
+              </p>
+            </form>
+          ) : (
+            <form onSubmit={handleLogin} className="login-form">
+              <div className="form-group">
+                <label>Email Address</label>
+                <input type="email" placeholder="name@company.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
 
-            <p className="bottom-link">
-              New to Brioinc? <Link href="/signup">Create account</Link>
-            </p>
-          </form>
+              <div className="form-group">
+                <label>Password</label>
+                <input type="password" placeholder="Enter your password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+
+              <button
+                type="button"
+                className="send-otp-btn"
+                onClick={handleSendOTP}
+                disabled={sendingOTP || loading || !email}
+              >
+                {sendingOTP ? "Sending..." : "Send OTP Code"}
+              </button>
+
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? "Signing In..." : "Sign In with Password"}
+              </button>
+
+              <p className="bottom-link">
+                New to Brioinc? <Link href="/signup">Create account</Link>
+              </p>
+            </form>
+          )}
         </div>
       </main>
 
