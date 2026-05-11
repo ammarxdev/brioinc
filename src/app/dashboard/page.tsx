@@ -72,8 +72,8 @@ export default function OverviewPage() {
       {/* Top Navbar Simulation for Tabs */}
       <div style={{ display: 'flex', gap: '2rem', marginBottom: '2rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '1rem' }}>
         <span style={{ fontWeight: 600, color: '#111827', borderBottom: '2px solid #111827', paddingBottom: '1rem', marginBottom: '-1rem' }}>Overview</span>
-        <a href="/dashboard/transactions" style={{ color: '#6b7280', textDecoration: 'none' }}>Transactions</a>
-        <a href="/dashboard/cards" style={{ color: '#6b7280', textDecoration: 'none' }}>Cards</a>
+        <a href="/dashboard/transactions" style={{ color: '#6b7280', textDecoration: 'none' }}>Payments</a>
+
       </div>
 
       <div className="overview-grid">
@@ -150,40 +150,7 @@ export default function OverviewPage() {
       </div>
 
       <div className="secondary-grid">
-        <div className="cards-section">
-          <div className="section-header">
-            <span className="section-title">Your Cards</span>
-            <span style={{ fontWeight: 'bold', cursor: 'pointer' }}>...</span>
-          </div>
-          
-          {cards.length === 0 ? (
-            <div style={{ padding: '1rem', border: '1px dashed #cbd5e1', borderRadius: '12px', textAlign: 'center', fontSize: '0.85rem', color: '#64748b' }}>
-              No cards issued.
-            </div>
-          ) : (
-            cards.map(card => (
-              <div key={card.id} className="credit-card" style={{ marginBottom: '1rem' }}>
-                <div className="card-top">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-                    <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-                    <line x1="12" y1="20" x2="12.01" y2="20" />
-                  </svg>
-                  <div className="card-chip"></div>
-                </div>
-                <div className="card-number">
-                  •••• •••• •••• {card.card_number?.slice(-4)}
-                </div>
-              </div>
-            ))
-          )}
 
-          <div className="add-card">
-            <div className="add-card-icon">+</div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Issue Card</span>
-          </div>
-        </div>
 
         <div className="activity-section">
           <div className="section-header">
