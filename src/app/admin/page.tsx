@@ -130,7 +130,7 @@ export default function AdminDashboardPage() {
         throw new Error(payload?.error || "Failed to promote admin");
       }
 
-      await checkAdminAuth();
+      window.location.reload();
     } catch (err: any) {
       setLoginError(err?.message || "Failed to verify OTP.");
     } finally {
