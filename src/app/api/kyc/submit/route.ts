@@ -90,12 +90,13 @@ export async function POST(req: Request) {
     if (userUpdateErr) {
       console.error("userUpdateErr:", userUpdateErr);
       return NextResponse.json({ 
-        error: `Failed to update verification status: ${userUpdateErr.message || JSON.stringify(userUpdateErr)}` 
+        error: `Failed to update user status to pending: ${userUpdateErr.message || JSON.stringify(userUpdateErr)}` 
       }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, submissionId: submission.id });
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "Internal Server Error" }, { status: 500 });
+    console.error("KYC submission route error:", error);
+    return NextResponse.json({ error: error?.message || "Internal Server Error during KYC submission" }, { status: 500 });
   }
 }

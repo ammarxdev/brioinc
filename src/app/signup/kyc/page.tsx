@@ -18,25 +18,54 @@ function KYCContent() {
   const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
 
   const emailFromQuery = (searchParams.get("email") || "").trim().toLowerCase();
   const otpEmail = (emailFromQuery || user?.email || "").trim().toLowerCase();
 
   // KYC Upload States
-  const [cnicFrontFile, setCnicFrontFile] = useState<File | null>(null);
-  const [cnicBackFile, setCnicBackFile] = useState<File | null>(null);
-  const [selfieFile, setSelfieFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [msg, setMsg] = useState({ type: "", text: "" });
-  const [showPopup, setShowPopup] = useState(false);
-
-  const frontInputRef = useRef<HTMLInputElement>(null);
-  const backInputRef = useRef<HTMLInputElement>(null);
-  const selfieInputRef = useRef<HTMLInputElement>(null);
-
-  const cnicFrontPreview = useMemo(() => (cnicFrontFile ? URL.createObjectURL(cnicFrontFile) : null), [cnicFrontFile]);
-  const cnicBackPreview = useMemo(() => (cnicBackFile ? URL.createObjectURL(cnicBackFile) : null), [cnicBackFile]);
+  ...
   const selfiePreview = useMemo(() => (selfieFile ? URL.createObjectURL(selfieFile) : null), [selfieFile]);
+
+  // Helper to update user profile once email is verified
+  const syncProfile = useCallback(async (userId: string) => {
+    console.log("Syncing profile for user:", userId);
+    const storedProfile = typeof window !== "undefined" ? localStorage.getItem("brioinc_pending_signup_profile") : null;
+    if (!storedProfile) {
+      console.log("No pending profile found in localStorage.");
+      return;
+    }
+
+    try {
+      const profile = JSON.parse(storedProfile);
+      const { error: profileErr } = await supabase
+        .from("users")
+        .update({
+          name: `${profile.firstName} ${profile.lastName}`.trim(),
+          first_name: profile.firstName,
+          last_name: profile.lastName,
+          date_of_birth: profile.dateOfBirth,
+          phone: profile.phone,
+          address: profile.address,
+          status: "kyc_required",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
+
+      if (profileErr) {
+        console.error("Error updating profile during sync:", profileErr);
+        throw profileErr;
+      }
+
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("brioinc_pending_signup_profile");
+      }
+      console.log("Profile synced successfully.");
+    } catch (err) {
+      console.error("syncProfile failed:", err);
+      throw err;
+    }
+  }, []);
 
   // If user status is already pending or approved, directly show relevant state
   useEffect(() => {
@@ -53,6 +82,7 @@ function KYCContent() {
     setSendingOtp(true);
     setMsg({ type: "", text: "" });
     try {
+      console.log("Sending OTP to:", otpEmail);
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: otpEmail,
@@ -65,7 +95,7 @@ function KYCContent() {
       setOtpSent(true);
       setMsg({ type: "success", text: `Verification code sent to ${otpEmail}!` });
     } catch (err: any) {
-      console.error(err);
+      console.error("Send OTP error:", err);
       setMsg({ type: "error", text: err.message || "Failed to send verification code." });
     } finally {
       setSendingOtp(false);
@@ -83,38 +113,16 @@ function KYCContent() {
 
       if (!session?.user) return;
 
-      const storedProfile = typeof window !== "undefined" ? localStorage.getItem("brioinc_pending_signup_profile") : null;
-      if (storedProfile) {
-        const profile = JSON.parse(storedProfile);
-
-        const { error: profileErr } = await supabase
-          .from("users")
-          .update({
-            name: `${profile.firstName} ${profile.lastName}`.trim(),
-            first_name: profile.firstName,
-            last_name: profile.lastName,
-            date_of_birth: profile.dateOfBirth,
-            phone: profile.phone,
-            address: profile.address,
-            status: "kyc_required",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", session.user.id);
-
-        if (profileErr) {
-          setMsg({ type: "error", text: profileErr.message || "Failed to update your profile." });
-          return;
-        }
-
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("brioinc_pending_signup_profile");
-        }
+      console.log("Detected active session in useEffect, syncing profile...");
+      try {
+        await syncProfile(session.user.id);
+        if (!mounted) return;
+        setStep(2);
+        setMsg((prev) => (prev.text ? prev : { type: "success", text: "Email verified successfully! Please upload your documents." }));
+      } catch (err: any) {
+        if (!mounted) return;
+        setMsg({ type: "error", text: err.message || "Failed to sync your profile." });
       }
-
-      if (!mounted) return;
-
-      setStep(2);
-      setMsg((prev) => (prev.text ? prev : { type: "success", text: "Email verified successfully! Please upload your documents." }));
     };
 
     run();
@@ -122,15 +130,17 @@ function KYCContent() {
     return () => {
       mounted = false;
     };
-  }, [step]);
+  }, [step, syncProfile]);
 
   const handleVerifyOTP = async () => {
     if (!otpEmail) {
       setMsg({ type: "error", text: "Missing email. Please go back and enter your email again." });
       return;
     }
+    setVerifyingOtp(true);
     setMsg({ type: "", text: "" });
     try {
+      console.log("Verifying OTP for:", otpEmail, "Code:", otpCode);
       const { data, error } = await supabase.auth.verifyOtp({
         email: otpEmail,
         token: otpCode,
@@ -138,44 +148,33 @@ function KYCContent() {
       });
       
       if (error) {
+        console.error("Supabase verifyOtp error:", error);
         throw error;
       }
 
       if (data.user) {
-        // Retrieve and write the user profile details only now that OTP is verified
-        const storedProfile = typeof window !== "undefined" ? localStorage.getItem("brioinc_pending_signup_profile") : null;
-        if (storedProfile) {
-          const profile = JSON.parse(storedProfile);
-          
-          const { error: profileErr } = await supabase
-            .from("users")
-            .update({
-              name: `${profile.firstName} ${profile.lastName}`.trim(),
-              first_name: profile.firstName,
-              last_name: profile.lastName,
-              date_of_birth: profile.dateOfBirth,
-              phone: profile.phone,
-              address: profile.address,
-              status: "kyc_required",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", data.user.id);
-
-          if (profileErr) throw profileErr;
-          
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("brioinc_pending_signup_profile");
-          }
-        }
-
+        console.log("OTP verified successfully for user:", data.user.id);
+        await syncProfile(data.user.id);
         setStep(2); // Go to step 3 (KYC details)
         setMsg({ type: "success", text: "Email verified successfully! Please upload your documents." });
       } else {
         throw new Error("Verification succeeded but no user session was created. Please try again.");
       }
     } catch (err: any) {
-      console.error(err);
+      console.error("handleVerifyOTP error:", err);
+      // If it's already verified, we might get an error but we can still proceed if session exists
+      if (err.message?.includes("Email already confirmed") || err.message?.includes("already confirmed")) {
+        console.log("Email already confirmed, checking session...");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await syncProfile(session.user.id);
+          setStep(2);
+          return;
+        }
+      }
       setMsg({ type: "error", text: err.message || "Invalid verification code. Please check your email." });
+    } finally {
+      setVerifyingOtp(false);
     }
   };
 
@@ -226,16 +225,27 @@ function KYCContent() {
       const backPath = `${userId}/${timestamp}-back.${extFromType(cnicBackFile.type)}`;
       const selfiePath = `${userId}/${timestamp}-selfie.${extFromType(selfieFile.type)}`;
 
+      console.log("Starting document uploads to Supabase storage...");
       const [frontUpload, backUpload, selfieUpload] = await Promise.all([
         supabase.storage.from("kyc").upload(frontPath, cnicFrontFile, { contentType: cnicFrontFile.type }),
         supabase.storage.from("kyc").upload(backPath, cnicBackFile, { contentType: cnicBackFile.type }),
         supabase.storage.from("kyc").upload(selfiePath, selfieFile, { contentType: selfieFile.type })
       ]);
 
-      if (frontUpload.error) throw frontUpload.error;
-      if (backUpload.error) throw backUpload.error;
-      if (selfieUpload.error) throw selfieUpload.error;
+      if (frontUpload.error) {
+        console.error("Front upload error:", frontUpload.error);
+        throw new Error(`CNIC Front upload failed: ${frontUpload.error.message}`);
+      }
+      if (backUpload.error) {
+        console.error("Back upload error:", backUpload.error);
+        throw new Error(`CNIC Back upload failed: ${backUpload.error.message}`);
+      }
+      if (selfieUpload.error) {
+        console.error("Selfie upload error:", selfieUpload.error);
+        throw new Error(`Selfie upload failed: ${selfieUpload.error.message}`);
+      }
 
+      console.log("Documents uploaded. Submitting metadata to API...");
       const submitRes = await fetch("/api/kyc/submit", {
         method: "POST",
         headers: {
@@ -250,13 +260,17 @@ function KYCContent() {
       });
 
       const submitData = await submitRes.json();
-      if (!submitRes.ok) throw new Error(submitData?.error || "Failed to submit verification");
+      if (!submitRes.ok) {
+        console.error("API submission failed:", submitData);
+        throw new Error(submitData?.error || "Failed to submit verification to server");
+      }
 
+      console.log("KYC submission successful.");
       setMsg({ type: "success", text: "Verification submitted successfully!" });
       setShowPopup(true);
     } catch (err: any) {
       console.error("KYC submit error:", err);
-      setMsg({ type: "error", text: err.message || "Failed to submit verification." });
+      setMsg({ type: "error", text: err.message || "Failed to submit verification. Please check your connection and try again." });
     } finally {
       setSubmitting(false);
     }
@@ -305,11 +319,11 @@ function KYCContent() {
                 
                 <button 
                   onClick={handleVerifyOTP}
-                  disabled={otpCode.length !== 6}
+                  disabled={verifyingOtp || otpCode.length !== 6}
                   className="submit-btn"
                   style={{ marginTop: '2rem' }}
                 >
-                  Verify & Continue
+                  {verifyingOtp ? "Verifying..." : "Verify & Continue"}
                 </button>
 
                 <p className="resend-text">
