@@ -26,8 +26,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const fetchingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    // Listen for auth changes (this handles the initial session automatically on subscribe)
+    let mounted = true;
+
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await fetchUserProfile(session.user.id, session.user.email, session.user.user_metadata);
+        } else {
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
+          }
+        }
+      } catch (err) {
+        console.error("Error getting initial session:", err);
+        if (mounted) setLoading(false);
+      }
+    };
+
+    initSession();
+
+    // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
       if (session?.user) {
         await fetchUserProfile(session.user.id, session.user.email, session.user.user_metadata);
       } else {
@@ -37,6 +59,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => {
+      mounted = false;
       authListener.subscription.unsubscribe();
     };
   }, []);

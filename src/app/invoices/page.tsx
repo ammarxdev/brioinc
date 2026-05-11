@@ -88,7 +88,13 @@ export default function NewInvoicePage() {
     setLoading(true);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
+      // Wrap getSession in a timeout to prevent infinite hanging due to orphaned locks
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) => 
+        setTimeout(() => reject(new Error("Authentication timeout. Please refresh the page.")), 8000)
+      );
+      
+      const { data: sessionData } = await Promise.race([sessionPromise, timeoutPromise]);
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) {
         setError("You must be logged in to create an invoice.");
@@ -134,7 +140,8 @@ export default function NewInvoicePage() {
       }, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-        }
+        },
+        timeout: 15000 // 15 seconds max wait to avoid infinite loading
       });
 
       if (response.data.success) {

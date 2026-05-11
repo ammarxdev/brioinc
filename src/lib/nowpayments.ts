@@ -49,6 +49,7 @@ export async function createNowPaymentsInvoice({
         'x-api-key': NOWPAYMENTS_API_KEY,
         'Content-Type': 'application/json',
       },
+      timeout: 10000,
     });
 
     return {
