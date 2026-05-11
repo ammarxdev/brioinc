@@ -20,7 +20,7 @@ export default function AdminDashboardPage() {
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all");
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
-  
+
   // Decryption & Settlement States
   const [decrypting, setDecrypting] = useState(false);
   const [decryptedAccount, setDecryptedAccount] = useState("");
@@ -63,31 +63,6 @@ export default function AdminDashboardPage() {
       fetchInitialData();
     }
   }, [isAdmin]);
-
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginLoading(true);
-    setLoginError("");
-    setLoginInfo("");
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      if (!data?.session) throw new Error("Login failed. No session returned.");
-      
-      // The useAuth hook will detect the session change and handle the rest
-      setLoginInfo("Authentication successful. Redirecting...");
-    } catch (err: any) {
-      console.error("Admin login failed:", err);
-      setLoginError(err.message || "Failed to sign in.");
-    } finally {
-      setLoginLoading(false);
-    }
-  };
 
   const handleBootstrapSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,9 +171,8 @@ export default function AdminDashboardPage() {
         throw new Error("Access Denied: This account is not authorized as an administrator.");
       }
 
-      setAdminUser(data.user);
-      setIsAdmin(true);
-      fetchInitialData();
+      // The useAuth hook will detect the session change and handle the rest
+      setLoginInfo("Authentication successful. Redirecting...");
     } catch (err: any) {
       console.error("Admin login error:", err);
       setLoginError(err.message || "Authentication failed.");
@@ -369,7 +343,7 @@ export default function AdminDashboardPage() {
         supabase.from("admin_logs").select("*").order("created_at", { ascending: false }).limit(50),
         supabase.from("email_logs").select("*").order("created_at", { ascending: false }).limit(50)
       ]);
-      
+
       if (!adminRes.error && adminRes.data) setAdminLogs(adminRes.data);
       if (!emailRes.error && emailRes.data) setEmailLogs(emailRes.data);
     } catch (err) {
@@ -421,7 +395,7 @@ export default function AdminDashboardPage() {
 
   const handleReject = async (user: any) => {
     if (!window.confirm("Are you sure you want to reject this user?")) return;
-    
+
     try {
       if (!user?.submission_id) {
         throw new Error("Missing submission id. Please refresh the page and try again.");
@@ -472,7 +446,7 @@ export default function AdminDashboardPage() {
   // Secure Decrypt Bank Details Trigger
   const handleDecryptBank = async (invoiceId: string) => {
     if (!adminUser) return;
-    
+
     try {
       setDecrypting(true);
       setDecryptedAccount("");
@@ -481,7 +455,7 @@ export default function AdminDashboardPage() {
 
       const res = await fetch('/api/admin/settle', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`
         },
@@ -519,7 +493,7 @@ export default function AdminDashboardPage() {
 
       const res = await fetch('/api/admin/settle', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`
         },
@@ -538,7 +512,7 @@ export default function AdminDashboardPage() {
         setReferenceNumber("");
         setSettleNotes("");
         setDecryptedAccount("");
-        
+
         // Refresh Lists
         fetchInvoices();
         fetchAuditLogs();
@@ -572,10 +546,10 @@ export default function AdminDashboardPage() {
       inv.bank_country || 'N/A',
       new Date(inv.created_at).toLocaleString()
     ]);
-    
-    const csvContent = "data:text/csv;charset=utf-8," 
+
+    const csvContent = "data:text/csv;charset=utf-8,"
       + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
-    
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -587,11 +561,11 @@ export default function AdminDashboardPage() {
 
   // Filter invoices based on search & filter state
   const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = 
+    const matchesSearch =
       inv.invoice_number?.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
       inv.client_name?.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
       inv.client_email?.toLowerCase().includes(invoiceSearch.toLowerCase());
-    
+
     const matchesStatus = invoiceStatusFilter === "all" || inv.status === invoiceStatusFilter;
 
     return matchesSearch && matchesStatus;
@@ -623,7 +597,7 @@ export default function AdminDashboardPage() {
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          
+
           <h1 className="login-title">Security Gateway</h1>
           <p className="login-subtitle">Brioinc Multi-Asset Settlement System</p>
 
@@ -635,11 +609,11 @@ export default function AdminDashboardPage() {
               <form onSubmit={handleAdminLogin} className="login-form">
                 <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                   <label className="login-label">Email Username</label>
-                  <input 
-                    type="email" 
-                    required 
-                    placeholder="operator@brioinc.net" 
-                    className="login-input" 
+                  <input
+                    type="email"
+                    required
+                    placeholder="operator@brioinc.net"
+                    className="login-input"
                     style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -648,11 +622,11 @@ export default function AdminDashboardPage() {
 
                 <div className="form-group" style={{ marginBottom: '2.5rem' }}>
                   <label className="login-label">Access Token / Password</label>
-                  <input 
-                    type="password" 
-                    required 
-                    placeholder="••••••••••••" 
-                    className="login-input" 
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••••••"
+                    className="login-input"
                     style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -751,7 +725,7 @@ export default function AdminDashboardPage() {
               )}
             </>
           )}
-          
+
           <div className="login-footer">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
@@ -878,334 +852,192 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="page-content">
-        
-        {/* Dynamic Nav tabs */}
-        <div className="admin-header">
-          <div>
-            <h1 className="page-title">Administrative Terminal</h1>
-            <p className="page-subtitle" style={{ marginBottom: 0 }}>
-              Audit gateways, verify global accounts, and dispatch manual bank wires.
-            </p>
-          </div>
-          
-          <div className="admin-header-actions" style={{ display: "flex", gap: "1rem" }}>
-            <button className="btn-header btn-header-outline" onClick={handleExportCSV}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Export Report
-            </button>
-            <button 
-              className="btn-header btn-header-dark" 
-              onClick={async () => {
-                await supabase.auth.signOut();
-                setIsAdmin(false);
-                setAdminUser(null);
-              }}
-              style={{ backgroundColor: "#dc2626", borderColor: "#dc2626", color: "white" }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-              Secure Exit
-            </button>
-          </div>
+
+      {/* Dynamic Nav tabs */}
+      <div className="admin-header">
+        <div>
+          <h1 className="page-title">Administrative Terminal</h1>
+          <p className="page-subtitle" style={{ marginBottom: 0 }}>
+            Audit gateways, verify global accounts, and dispatch manual bank wires.
+          </p>
         </div>
 
-        {/* Navigation Tabs bar */}
-        <div style={{ display: "flex", gap: "1rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", marginBottom: "1.5rem" }}>
-          <button 
-            onClick={() => setActiveTab("users")}
-            style={{ 
-              padding: "0.75rem 1rem", 
-              background: "none", 
-              border: "none", 
-              borderBottom: activeTab === "users" ? "2px solid #ffffff" : "2px solid transparent", 
-              fontWeight: activeTab === "users" ? 700 : 500, 
-              color: activeTab === "users" ? "#ffffff" : "#64748b", 
-              cursor: "pointer",
-              fontSize: "0.9rem"
-            }}
-          >
-            Users & KYC Verification
+        <div className="admin-header-actions" style={{ display: "flex", gap: "1rem" }}>
+          <button className="btn-header btn-header-outline" onClick={handleExportCSV}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export Report
           </button>
-          <button 
-            onClick={() => setActiveTab("invoices")}
-            style={{ 
-              padding: "0.75rem 1rem", 
-              background: "none", 
-              border: "none", 
-              borderBottom: activeTab === "invoices" ? "2px solid #ffffff" : "2px solid transparent", 
-              fontWeight: activeTab === "invoices" ? 700 : 500, 
-              color: activeTab === "invoices" ? "#ffffff" : "#64748b", 
-              cursor: "pointer",
-              fontSize: "0.9rem"
+          <button
+            className="btn-header btn-header-dark"
+            onClick={async () => {
+              await supabase.auth.signOut();
             }}
+            style={{ backgroundColor: "#dc2626", borderColor: "#dc2626", color: "white" }}
           >
-            Invoices & Settlement ({invoices.filter(i => i.status === 'paid').length} Paid)
-          </button>
-          <button 
-            onClick={() => setActiveTab("audit")}
-            style={{ 
-              padding: "0.75rem 1rem", 
-              background: "none", 
-              border: "none", 
-              borderBottom: activeTab === "audit" ? "2px solid #ffffff" : "2px solid transparent", 
-              fontWeight: activeTab === "audit" ? 700 : 500, 
-              color: activeTab === "audit" ? "#ffffff" : "#64748b", 
-              cursor: "pointer",
-              fontSize: "0.9rem"
-            }}
-          >
-            System Logs & Audit
-          </button>
-          <button 
-            onClick={() => setActiveTab("create-admin")}
-            style={{ 
-              padding: "0.75rem 1rem", 
-              background: "none", 
-              border: "none", 
-              borderBottom: activeTab === "create-admin" ? "2px solid #ffffff" : "2px solid transparent", 
-              fontWeight: activeTab === "create-admin" ? 700 : 500, 
-              color: activeTab === "create-admin" ? "#ffffff" : "#64748b", 
-              cursor: "pointer",
-              fontSize: "0.9rem"
-            }}
-          >
-            Create Admin
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Secure Exit
           </button>
         </div>
+      </div>
 
-        {dataLoadError && (
-          <div
-            style={{
-              marginBottom: "1.25rem",
-              padding: "0.9rem 1rem",
-              borderRadius: "12px",
-              border: "1px solid rgba(239, 68, 68, 0.25)",
-              background: "rgba(239, 68, 68, 0.06)",
-              color: "#fca5a5",
-              fontSize: "0.85rem",
-              lineHeight: 1.5,
-            }}
-          >
-            {dataLoadError}
-          </div>
-        )}
+      {/* Navigation Tabs bar */}
+      <div style={{ display: "flex", gap: "1rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", marginBottom: "1.5rem" }}>
+        <button
+          onClick={() => setActiveTab("users")}
+          style={{
+            padding: "0.75rem 1rem",
+            background: "none",
+            border: "none",
+            borderBottom: activeTab === "users" ? "2px solid #ffffff" : "2px solid transparent",
+            fontWeight: activeTab === "users" ? 700 : 500,
+            color: activeTab === "users" ? "#ffffff" : "#64748b",
+            cursor: "pointer",
+            fontSize: "0.9rem"
+          }}
+        >
+          Users & KYC Verification
+        </button>
+        <button
+          onClick={() => setActiveTab("invoices")}
+          style={{
+            padding: "0.75rem 1rem",
+            background: "none",
+            border: "none",
+            borderBottom: activeTab === "invoices" ? "2px solid #ffffff" : "2px solid transparent",
+            fontWeight: activeTab === "invoices" ? 700 : 500,
+            color: activeTab === "invoices" ? "#ffffff" : "#64748b",
+            cursor: "pointer",
+            fontSize: "0.9rem"
+          }}
+        >
+          Invoices & Settlement ({invoices.filter(i => i.status === 'paid').length} Paid)
+        </button>
+        <button
+          onClick={() => setActiveTab("audit")}
+          style={{
+            padding: "0.75rem 1rem",
+            background: "none",
+            border: "none",
+            borderBottom: activeTab === "audit" ? "2px solid #ffffff" : "2px solid transparent",
+            fontWeight: activeTab === "audit" ? 700 : 500,
+            color: activeTab === "audit" ? "#ffffff" : "#64748b",
+            cursor: "pointer",
+            fontSize: "0.9rem"
+          }}
+        >
+          System Logs & Audit
+        </button>
+        <button
+          onClick={() => setActiveTab("create-admin")}
+          style={{
+            padding: "0.75rem 1rem",
+            background: "none",
+            border: "none",
+            borderBottom: activeTab === "create-admin" ? "2px solid #ffffff" : "2px solid transparent",
+            fontWeight: activeTab === "create-admin" ? 700 : 500,
+            color: activeTab === "create-admin" ? "#ffffff" : "#64748b",
+            cursor: "pointer",
+            fontSize: "0.9rem"
+          }}
+        >
+          Create Admin
+        </button>
+      </div>
 
-        {/* Tab Panel contents */}
-        {activeTab === "users" && (
-          <div className="bottom-widgets-grid" style={{ gridTemplateColumns: "2fr 1.2fr" }}>
-            <div className="widget-card">
-              <div className="widget-header">
-                <h2 className="section-title" style={{ fontSize: "1.1rem", fontWeight: 700 }}>Pending KYC & User Reviews</h2>
-                <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>Total pending: {pendingUsers.length}</span>
-              </div>
+      {dataLoadError && (
+        <div
+          style={{
+            marginBottom: "1.25rem",
+            padding: "0.9rem 1rem",
+            borderRadius: "12px",
+            border: "1px solid rgba(239, 68, 68, 0.25)",
+            background: "rgba(239, 68, 68, 0.06)",
+            color: "#fca5a5",
+            fontSize: "0.85rem",
+            lineHeight: 1.5,
+          }}
+        >
+          {dataLoadError}
+        </div>
+      )}
 
-              <div className="table-container">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>User Details</th>
-                      <th>Application status</th>
-                      <th>Risk Check</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr><td colSpan={4} style={{textAlign: 'center', padding: '2rem'}}>Querying database records...</td></tr>
-                    ) : pendingUsers.length === 0 ? (
-                      <tr><td colSpan={4} style={{textAlign: 'center', padding: '2rem', color: "#6b7280"}}>All KYC requests verified. Desk clear!</td></tr>
-                    ) : (
-                      pendingUsers.map(u => (
-                        <tr key={u.id}>
-                          <td>
-                            <div className="user-cell">
-                              <div className="user-avatar">{u.name?.substring(0, 2).toUpperCase() || 'U'}</div>
-                              <div className="user-info">
-                                <span className="user-name">{u.name || 'Unknown User'}</span>
-                                <span className="user-email">{u.email}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="status-badge" style={{ background: "rgba(234, 179, 8, 0.08)", color: "#ca8a04" }}>
-                              <div className="status-dot"></div>
-                              PENDING REVIEW
-                            </div>
-                          </td>
-                          <td>
-                            <div className="risk-score risk-low">
-                              <div className="risk-bar-container">
-                                <div className="risk-bar"></div>
-                              </div>
-                              <span className="risk-label" style={{ color: '#16a34a' }}>Low Risk</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="action-cell">
-                              <button 
-                                className="btn-inspect" 
-                                onClick={() => setSelectedReviewUser(u)} 
-                                style={{ 
-                                  backgroundColor: "#0f172a", 
-                                  color: "white", 
-                                  padding: "0.5rem 1rem", 
-                                  borderRadius: "6px", 
-                                  fontSize: "0.8rem", 
-                                  fontWeight: 700, 
-                                  border: "none",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                Inspect CNIC
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Side activity feed */}
-            <div className="widget-card">
-              <div className="feed-header">
-                <div className="live-dot"></div>
-                Live Node Watcher
-              </div>
-              <div className="feed-list">
-                <div className="feed-item">
-                  <div className="feed-item-header">
-                    <div className="feed-icon">🔑</div>
-                    <div className="feed-title">
-                      Webhooks Operational
-                      <span className="feed-time">Active</span>
-                    </div>
-                  </div>
-                  <div className="feed-desc">NowPayments IPN verification listener loaded on host.</div>
-                </div>
-                <div className="feed-item" style={{ background: "rgba(16,185,129,0.02)" }}>
-                  <div className="feed-item-header">
-                    <div className="feed-icon">🏦</div>
-                    <div className="feed-title">
-                      AES Banking Shield Active
-                      <span className="feed-time">System</span>
-                    </div>
-                  </div>
-                  <div className="feed-desc">Direct database banking details are cryptographically locked.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "invoices" && (
+      {/* Tab Panel contents */}
+      {activeTab === "users" && (
+        <div className="bottom-widgets-grid" style={{ gridTemplateColumns: "2fr 1.2fr" }}>
           <div className="widget-card">
-            {/* Search and filters row */}
-            <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
-              <input 
-                type="text" 
-                placeholder="Search Invoice #, Client name, Client email..." 
-                className="form-input"
-                style={{ flex: 1, padding: "0.6rem 1rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", background: "rgba(255,255,255,0.02)", color: "white" }}
-                value={invoiceSearch}
-                onChange={(e) => setInvoiceSearch(e.target.value)}
-              />
-              <select 
-                className="form-input"
-                style={{ width: "200px", padding: "0.6rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", background: "rgba(255,255,255,0.02)", color: "white" }}
-                value={invoiceStatusFilter}
-                onChange={(e) => setInvoiceStatusFilter(e.target.value)}
-              >
-                <option value="all" style={{ background: "#050505", color: "white" }}>All Invoices</option>
-                <option value="pending" style={{ background: "#050505", color: "white" }}>Pending Checkout</option>
-                <option value="paid" style={{ background: "#050505", color: "white" }}>Paid (Needs Payout)</option>
-                <option value="completed" style={{ background: "#050505", color: "white" }}>Completed / Settled</option>
-                <option value="rejected" style={{ background: "#050505", color: "white" }}>Rejected / Voided</option>
-              </select>
+            <div className="widget-header">
+              <h2 className="section-title" style={{ fontSize: "1.1rem", fontWeight: 700 }}>Pending KYC & User Reviews</h2>
+              <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>Total pending: {pendingUsers.length}</span>
             </div>
 
             <div className="table-container">
               <table className="data-table">
                 <thead>
-                  <tr style={{ color: "#64748b" }}>
-                    <th>Invoice Number</th>
-                    <th>Client Details</th>
-                    <th>Billed Amount</th>
-                    <th>Settlement Status</th>
-                    <th>Created On</th>
-                    <th style={{ textAlign: "right" }}>Payout Settlement</th>
+                  <tr>
+                    <th>User Details</th>
+                    <th>Application status</th>
+                    <th>Risk Check</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInvoices.length === 0 ? (
-                    <tr><td colSpan={6} style={{ textAlign: "center", padding: "3rem", color: "#64748b" }}>No matching invoices found in database ledger.</td></tr>
+                  {loading ? (
+                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>Querying database records...</td></tr>
+                  ) : pendingUsers.length === 0 ? (
+                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: "#6b7280" }}>All KYC requests verified. Desk clear!</td></tr>
                   ) : (
-                    filteredInvoices.map((inv) => (
-                      <tr key={inv.id}>
-                        <td style={{ fontWeight: 700, fontFamily: "monospace", color: "#ffffff" }}>{inv.invoice_number}</td>
+                    pendingUsers.map(u => (
+                      <tr key={u.id}>
                         <td>
-                          <div style={{ display: "flex", flexDirection: "column" }}>
-                            <span style={{ fontWeight: 600, color: "#ffffff" }}>{inv.client_name || 'Partner client'}</span>
-                            <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{inv.client_email}</span>
+                          <div className="user-cell">
+                            <div className="user-avatar">{u.name?.substring(0, 2).toUpperCase() || 'U'}</div>
+                            <div className="user-info">
+                              <span className="user-name">{u.name || 'Unknown User'}</span>
+                              <span className="user-email">{u.email}</span>
+                            </div>
                           </div>
                         </td>
-                        <td style={{ fontWeight: 700, color: "#ffffff" }}>
-                          {inv.amount.toLocaleString()} {inv.currency || 'USD'}
+                        <td>
+                          <div className="status-badge" style={{ background: "rgba(234, 179, 8, 0.08)", color: "#ca8a04" }}>
+                            <div className="status-dot"></div>
+                            PENDING REVIEW
+                          </div>
                         </td>
                         <td>
-                          {inv.status === 'pending' && (
-                            <span style={{ background: "rgba(234,179,8,0.08)", color: "#ca8a04", padding: "0.25rem 0.5rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 600 }}>
-                              Checkout Pending
-                            </span>
-                          )}
-                          {inv.status === 'paid' && (
-                            <span style={{ background: "rgba(16,185,129,0.08)", color: "#16a34a", padding: "0.25rem 0.5rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 600, animation: "pulse 1.5s infinite" }}>
-                              Paid (Needs Wire)
-                            </span>
-                          )}
-                          {inv.status === 'completed' && (
-                            <span style={{ background: "rgba(59,130,246,0.08)", color: "#2563eb", padding: "0.25rem 0.5rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 600 }}>
-                              Settled & Closed
-                            </span>
-                          )}
-                          {inv.status === 'rejected' && (
-                            <span style={{ background: "rgba(239,68,68,0.08)", color: "#dc2626", padding: "0.25rem 0.5rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 600 }}>
-                              Voided / Expired
-                            </span>
-                          )}
+                          <div className="risk-score risk-low">
+                            <div className="risk-bar-container">
+                              <div className="risk-bar"></div>
+                            </div>
+                            <span className="risk-label" style={{ color: '#16a34a' }}>Low Risk</span>
+                          </div>
                         </td>
-                        <td style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                          {new Date(inv.created_at).toLocaleDateString()}
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          {inv.status === 'paid' && (
-                            <button 
-                              onClick={() => setSelectedInvoice(inv)}
-                              style={{ border: "none", background: "#ffffff", color: "black", padding: "0.5rem 1rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer", textTransform: "uppercase" }}
+                        <td>
+                          <div className="action-cell">
+                            <button
+                              className="btn-inspect"
+                              onClick={() => setSelectedReviewUser(u)}
+                              style={{
+                                backgroundColor: "#0f172a",
+                                color: "white",
+                                padding: "0.5rem 1rem",
+                                borderRadius: "6px",
+                                fontSize: "0.8rem",
+                                fontWeight: 700,
+                                border: "none",
+                                cursor: "pointer"
+                              }}
                             >
-                              Settle Payout
+                              Inspect CNIC
                             </button>
-                          )}
-                          {inv.status === 'completed' && (
-                            <button 
-                              onClick={() => setSelectedInvoice(inv)}
-                              style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", color: "#cbd5e1", padding: "0.5rem 1rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                            >
-                              Inspect Log
-                            </button>
-                          )}
-                          {inv.status === 'pending' && (
-                            <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Awaiting Client</span>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -1214,410 +1046,550 @@ export default function AdminDashboardPage() {
               </table>
             </div>
           </div>
-        )}
 
-        {activeTab === "audit" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-            {/* Left: Administrative actions */}
-            <div className="widget-card">
-              <h3 style={{ margin: "0 0 1.25rem 0", fontSize: "1.1rem", fontWeight: 700, color: "white" }}>Admin Activity Trails (Decryptions & Releases)</h3>
-              <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-                {adminLogs.length === 0 ? (
-                  <p style={{ color: "#64748b", fontSize: "0.85rem", textAlign: "center", padding: "2rem" }}>No admin activity logged yet.</p>
-                ) : (
-                  adminLogs.map(log => (
-                    <div key={log.id} style={{ padding: "0.85rem 0", borderBottom: "1px solid rgba(255,255,255,0.03)", fontSize: "0.8rem" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                        <strong style={{ color: "#ffffff", textTransform: "uppercase" }}>{log.action}</strong>
-                        <span style={{ color: "#64748b" }}>{new Date(log.created_at).toLocaleTimeString()}</span>
-                      </div>
-                      <p style={{ margin: "0 0 4px 0", color: "#94a3b8" }}>{log.details}</p>
-                      <span style={{ fontSize: "0.7rem", color: "#64748b" }}>IP Registered: {log.ip_address || 'Internal'}</span>
-                    </div>
-                  ))
-                )}
-              </div>
+          {/* Side activity feed */}
+          <div className="widget-card">
+            <div className="feed-header">
+              <div className="live-dot"></div>
+              Live Node Watcher
             </div>
-
-            {/* Right: sent transactional email metrics */}
-            <div className="widget-card">
-              <h3 style={{ margin: "0 0 1rem 0", fontSize: "1rem", fontWeight: 700 }}>Nodemailer Dispatch Audits</h3>
-              <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-                {emailLogs.length === 0 ? (
-                  <p style={{ color: "#6b7280", fontSize: "0.85rem", textAlign: "center", padding: "2rem" }}>No dispatches registered.</p>
-                ) : (
-                  emailLogs.map(log => (
-                    <div key={log.id} style={{ padding: "0.75rem 0", borderBottom: "1px solid #f3f4f6", fontSize: "0.8rem" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                        <span style={{ fontWeight: 600, color: "#111827" }}>{log.recipient}</span>
-                        <span style={{ color: log.status === 'sent' ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
-                          {log.status.toUpperCase()}
-                        </span>
-                      </div>
-                      <p style={{ margin: "0 0 4px 0", color: "#4b5563" }}>Subject: {log.subject}</p>
-                      <span style={{ fontSize: "0.7rem", color: "#9ca3af" }}>Triggered Action: {log.action} • {new Date(log.created_at).toLocaleDateString()}</span>
-                    </div>
-                  ))
-                )}
+            <div className="feed-list">
+              <div className="feed-item">
+                <div className="feed-item-header">
+                  <div className="feed-icon">🔑</div>
+                  <div className="feed-title">
+                    Webhooks Operational
+                    <span className="feed-time">Active</span>
+                  </div>
+                </div>
+                <div className="feed-desc">NowPayments IPN verification listener loaded on host.</div>
+              </div>
+              <div className="feed-item" style={{ background: "rgba(16,185,129,0.02)" }}>
+                <div className="feed-item-header">
+                  <div className="feed-icon">🏦</div>
+                  <div className="feed-title">
+                    AES Banking Shield Active
+                    <span className="feed-time">System</span>
+                  </div>
+                </div>
+                <div className="feed-desc">Direct database banking details are cryptographically locked.</div>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Dynamic Settle Drawer/Modal Popover overlay */}
-        {selectedInvoice && (
-          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
-            <div style={{ background: "#08080a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "24px", padding: "2.5rem", maxWidth: "600px", width: "100%", boxShadow: "0 30px 100px rgba(0,0,0,0.9)", position: "relative", color: "#ffffff" }}>
-              
-              <button 
-                onClick={() => { setSelectedInvoice(null); setDecryptedAccount(""); setReferenceNumber(""); }}
-                style={{ position: "absolute", top: "1.5rem", right: "1.5rem", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#64748b" }}
-              >
-                &times;
-              </button>
+      {activeTab === "invoices" && (
+        <div className="widget-card">
+          {/* Search and filters row */}
+          <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
+            <input
+              type="text"
+              placeholder="Search Invoice #, Client name, Client email..."
+              className="form-input"
+              style={{ flex: 1, padding: "0.6rem 1rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", background: "rgba(255,255,255,0.02)", color: "white" }}
+              value={invoiceSearch}
+              onChange={(e) => setInvoiceSearch(e.target.value)}
+            />
+            <select
+              className="form-input"
+              style={{ width: "200px", padding: "0.6rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", background: "rgba(255,255,255,0.02)", color: "white" }}
+              value={invoiceStatusFilter}
+              onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+            >
+              <option value="all" style={{ background: "#050505", color: "white" }}>All Invoices</option>
+              <option value="pending" style={{ background: "#050505", color: "white" }}>Pending Checkout</option>
+              <option value="paid" style={{ background: "#050505", color: "white" }}>Paid (Needs Payout)</option>
+              <option value="completed" style={{ background: "#050505", color: "white" }}>Completed / Settled</option>
+              <option value="rejected" style={{ background: "#050505", color: "white" }}>Rejected / Voided</option>
+            </select>
+          </div>
 
-              <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: "0.5rem", color: "#ffffff" }}>
-                {selectedInvoice.status === 'completed' ? 'Invoice Logs Review' : 'Settle Paid Invoice Payout'}
-              </h2>
-              <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "0 0 1.5rem 0" }}>
-                Invoice reference: <strong style={{ color: "white" }}>{selectedInvoice.invoice_number}</strong>
-              </p>
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr style={{ color: "#64748b" }}>
+                  <th>Invoice Number</th>
+                  <th>Client Details</th>
+                  <th>Billed Amount</th>
+                  <th>Settlement Status</th>
+                  <th>Created On</th>
+                  <th style={{ textAlign: "right" }}>Payout Settlement</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInvoices.length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: "center", padding: "3rem", color: "#64748b" }}>No matching invoices found in database ledger.</td></tr>
+                ) : (
+                  filteredInvoices.map((inv) => (
+                    <tr key={inv.id}>
+                      <td style={{ fontWeight: 700, fontFamily: "monospace", color: "#ffffff" }}>{inv.invoice_number}</td>
+                      <td>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontWeight: 600, color: "#ffffff" }}>{inv.client_name || 'Partner client'}</span>
+                          <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{inv.client_email}</span>
+                        </div>
+                      </td>
+                      <td style={{ fontWeight: 700, color: "#ffffff" }}>
+                        {inv.amount.toLocaleString()} {inv.currency || 'USD'}
+                      </td>
+                      <td>
+                        {inv.status === 'pending' && (
+                          <span style={{ background: "rgba(234,179,8,0.08)", color: "#ca8a04", padding: "0.25rem 0.5rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 600 }}>
+                            Checkout Pending
+                          </span>
+                        )}
+                        {inv.status === 'paid' && (
+                          <span style={{ background: "rgba(16,185,129,0.08)", color: "#16a34a", padding: "0.25rem 0.5rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 600, animation: "pulse 1.5s infinite" }}>
+                            Paid (Needs Wire)
+                          </span>
+                        )}
+                        {inv.status === 'completed' && (
+                          <span style={{ background: "rgba(59,130,246,0.08)", color: "#2563eb", padding: "0.25rem 0.5rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 600 }}>
+                            Settled & Closed
+                          </span>
+                        )}
+                        {inv.status === 'rejected' && (
+                          <span style={{ background: "rgba(239,68,68,0.08)", color: "#dc2626", padding: "0.25rem 0.5rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 600 }}>
+                            Voided / Expired
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                        {new Date(inv.created_at).toLocaleDateString()}
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        {inv.status === 'paid' && (
+                          <button
+                            onClick={() => setSelectedInvoice(inv)}
+                            style={{ border: "none", background: "#ffffff", color: "black", padding: "0.5rem 1rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer", textTransform: "uppercase" }}
+                          >
+                            Settle Payout
+                          </button>
+                        )}
+                        {inv.status === 'completed' && (
+                          <button
+                            onClick={() => setSelectedInvoice(inv)}
+                            style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", color: "#cbd5e1", padding: "0.5rem 1rem", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                          >
+                            Inspect Log
+                          </button>
+                        )}
+                        {inv.status === 'pending' && (
+                          <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Awaiting Client</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
-                <div>
-                  <span style={{ color: "#64748b" }}>Client Name:</span>
-                  <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedInvoice.client_name}</div>
-                </div>
-                <div>
-                  <span style={{ color: "#64748b" }}>Total Collected:</span>
-                  <div style={{ fontWeight: 700, color: "#10b981" }}>
-                    {selectedInvoice.amount.toLocaleString()} {selectedInvoice.currency}
-                  </div>
-                </div>
-              </div>
-
-              {/* Bank accounts processing block */}
-              <div style={{ border: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.01)", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
-                <h4 style={{ margin: "0 0 0.75rem 0", fontSize: "0.8rem", textTransform: "uppercase", color: "#64748b", letterSpacing: "0.05em" }}>Creator Receiving Bank Wire Details</h4>
-                
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
-                  <div>
-                    <span style={{ color: "#64748b" }}>Bank Name:</span>
-                    <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedInvoice.bank_name}</div>
-                  </div>
-                  <div>
-                    <span style={{ color: "#64748b" }}>Destination Country:</span>
-                    <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedInvoice.bank_country}</div>
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ color: "#64748b", fontSize: "0.85rem" }}>Bank Account Number / IBAN:</span>
-                  <div style={{ display: "flex", gap: "0.5rem", marginTop: "4px" }}>
-                    <input 
-                      type="text" 
-                      readOnly 
-                      className="form-input" 
-                      style={{ 
-                        flex: 1, 
-                        background: "rgba(255,255,255,0.02)", 
-                        border: "1px solid rgba(255,255,255,0.06)", 
-                        fontSize: "0.85rem", 
-                        fontFamily: "monospace", 
-                        padding: "0.5rem 0.75rem",
-                        borderRadius: "8px",
-                        color: "#ffffff"
-                      }}
-                      value={decryptedAccount || "••••••••••••••••••••••••••••"} 
-                    />
-                    
-                    {selectedInvoice.status !== 'completed' && !decryptedAccount && (
-                      <button 
-                        onClick={() => handleDecryptBank(selectedInvoice.id)}
-                        disabled={decrypting}
-                        style={{ 
-                          background: "#ffffff", 
-                          color: "#000000", 
-                          border: "none", 
-                          padding: "0.4rem 1rem", 
-                          borderRadius: "100px", 
-                          fontSize: "0.75rem", 
-                          fontWeight: 800, 
-                          cursor: "pointer",
-                          textTransform: "uppercase"
-                        }}
-                      >
-                        {decrypting ? "Decrypting..." : "Reveal IBAN"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Settlement form */}
-              {selectedInvoice.status !== 'completed' ? (
-                <div>
-                  <div className="form-group" style={{ marginBottom: "1rem" }}>
-                    <label className="form-label" style={{ fontWeight: 600, color: "#cbd5e1", fontSize: "0.85rem", display: "block", marginBottom: "0.5rem" }}>Binance TXN ID / Wire Reference *</label>
-                    <input 
-                      type="text" 
-                      className="form-input"
-                      placeholder="Enter the wire transaction receipt reference code"
-                      style={{ padding: "0.6rem 0.8rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", width: "100%", background: "rgba(255,255,255,0.02)", color: "white" }}
-                      value={referenceNumber}
-                      onChange={(e) => setReferenceNumber(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ marginBottom: "1.5rem" }}>
-                    <label className="form-label" style={{ color: "#cbd5e1", fontSize: "0.85rem", display: "block", marginBottom: "0.5rem" }}>Settlement Internal Notes (Optional)</label>
-                    <textarea 
-                      className="form-input"
-                      rows={2}
-                      placeholder="e.g. Cleared manual bank wire SEPA transfer."
-                      style={{ padding: "0.6rem 0.8rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", width: "100%", background: "rgba(255,255,255,0.02)", color: "white", fontFamily: "inherit" }}
-                      value={settleNotes}
-                      onChange={(e) => setSettleNotes(e.target.value)}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", gap: "0.75rem" }}>
-                    <button 
-                      onClick={handleConfirmSettlement}
-                      disabled={settling}
-                      style={{ 
-                        flex: 1, 
-                        background: "#10b981", 
-                        color: "white", 
-                        border: "none", 
-                        padding: "0.8rem", 
-                        borderRadius: "100px", 
-                        fontWeight: 800, 
-                        cursor: "pointer",
-                        textTransform: "uppercase",
-                        fontSize: "0.8rem",
-                        letterSpacing: "0.05em"
-                      }}
-                    >
-                      {settling ? "Confirming Release..." : "Release Payout & Settle Invoice"}
-                    </button>
-                    
-                    <button 
-                      onClick={() => { setSelectedInvoice(null); setDecryptedAccount(""); }}
-                      style={{ 
-                        background: "rgba(255,255,255,0.03)", 
-                        border: "1px solid rgba(255,255,255,0.05)",
-                        color: "#cbd5e1", 
-                        padding: "0.8rem 1.2rem", 
-                        borderRadius: "100px", 
-                        fontWeight: 600, 
-                        cursor: "pointer" 
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
+      {activeTab === "audit" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+          {/* Left: Administrative actions */}
+          <div className="widget-card">
+            <h3 style={{ margin: "0 0 1.25rem 0", fontSize: "1.1rem", fontWeight: 700, color: "white" }}>Admin Activity Trails (Decryptions & Releases)</h3>
+            <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+              {adminLogs.length === 0 ? (
+                <p style={{ color: "#64748b", fontSize: "0.85rem", textAlign: "center", padding: "2rem" }}>No admin activity logged yet.</p>
               ) : (
-                <div style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.15)", padding: "1.25rem", borderRadius: "12px", fontSize: "0.85rem", color: "#4ade80", lineHeight: 1.5 }}>
-                  <strong>🔒 Audit Confirmed</strong>: This transaction has been fully completed. The local bank wire was successfully released.
-                </div>
+                adminLogs.map(log => (
+                  <div key={log.id} style={{ padding: "0.85rem 0", borderBottom: "1px solid rgba(255,255,255,0.03)", fontSize: "0.8rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <strong style={{ color: "#ffffff", textTransform: "uppercase" }}>{log.action}</strong>
+                      <span style={{ color: "#64748b" }}>{new Date(log.created_at).toLocaleTimeString()}</span>
+                    </div>
+                    <p style={{ margin: "0 0 4px 0", color: "#94a3b8" }}>{log.details}</p>
+                    <span style={{ fontSize: "0.7rem", color: "#64748b" }}>IP Registered: {log.ip_address || 'Internal'}</span>
+                  </div>
+                ))
               )}
-
             </div>
           </div>
-        )}
 
-        {/* Dynamic CNIC Review Modal Popover overlay */}
-        {selectedReviewUser && (
-          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
-            <div style={{ background: "#08080a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "24px", padding: "2.5rem", maxWidth: "700px", width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 30px 100px rgba(0,0,0,0.9)", position: "relative", color: "#ffffff" }}>
-              
-              <button 
-                onClick={() => setSelectedReviewUser(null)}
-                style={{ position: "absolute", top: "1.5rem", right: "1.5rem", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#64748b" }}
+          {/* Right: sent transactional email metrics */}
+          <div className="widget-card">
+            <h3 style={{ margin: "0 0 1rem 0", fontSize: "1rem", fontWeight: 700 }}>Nodemailer Dispatch Audits</h3>
+            <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+              {emailLogs.length === 0 ? (
+                <p style={{ color: "#6b7280", fontSize: "0.85rem", textAlign: "center", padding: "2rem" }}>No dispatches registered.</p>
+              ) : (
+                emailLogs.map(log => (
+                  <div key={log.id} style={{ padding: "0.75rem 0", borderBottom: "1px solid #f3f4f6", fontSize: "0.8rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <span style={{ fontWeight: 600, color: "#111827" }}>{log.recipient}</span>
+                      <span style={{ color: log.status === 'sent' ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+                        {log.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <p style={{ margin: "0 0 4px 0", color: "#4b5563" }}>Subject: {log.subject}</p>
+                    <span style={{ fontSize: "0.7rem", color: "#9ca3af" }}>Triggered Action: {log.action} • {new Date(log.created_at).toLocaleDateString()}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Settle Drawer/Modal Popover overlay */}
+      {selectedInvoice && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+          <div style={{ background: "#08080a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "24px", padding: "2.5rem", maxWidth: "600px", width: "100%", boxShadow: "0 30px 100px rgba(0,0,0,0.9)", position: "relative", color: "#ffffff" }}>
+
+            <button
+              onClick={() => { setSelectedInvoice(null); setDecryptedAccount(""); setReferenceNumber(""); }}
+              style={{ position: "absolute", top: "1.5rem", right: "1.5rem", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#64748b" }}
+            >
+              &times;
+            </button>
+
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: "0.5rem", color: "#ffffff" }}>
+              {selectedInvoice.status === 'completed' ? 'Invoice Logs Review' : 'Settle Paid Invoice Payout'}
+            </h2>
+            <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "0 0 1.5rem 0" }}>
+              Invoice reference: <strong style={{ color: "white" }}>{selectedInvoice.invoice_number}</strong>
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
+              <div>
+                <span style={{ color: "#64748b" }}>Client Name:</span>
+                <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedInvoice.client_name}</div>
+              </div>
+              <div>
+                <span style={{ color: "#64748b" }}>Total Collected:</span>
+                <div style={{ fontWeight: 700, color: "#10b981" }}>
+                  {selectedInvoice.amount.toLocaleString()} {selectedInvoice.currency}
+                </div>
+              </div>
+            </div>
+
+            {/* Bank accounts processing block */}
+            <div style={{ border: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.01)", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
+              <h4 style={{ margin: "0 0 0.75rem 0", fontSize: "0.8rem", textTransform: "uppercase", color: "#64748b", letterSpacing: "0.05em" }}>Creator Receiving Bank Wire Details</h4>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
+                <div>
+                  <span style={{ color: "#64748b" }}>Bank Name:</span>
+                  <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedInvoice.bank_name}</div>
+                </div>
+                <div>
+                  <span style={{ color: "#64748b" }}>Destination Country:</span>
+                  <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedInvoice.bank_country}</div>
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: "#64748b", fontSize: "0.85rem" }}>Bank Account Number / IBAN:</span>
+                <div style={{ display: "flex", gap: "0.5rem", marginTop: "4px" }}>
+                  <input
+                    type="text"
+                    readOnly
+                    className="form-input"
+                    style={{
+                      flex: 1,
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid rgba(255,255,255,0.06)",
+                      fontSize: "0.85rem",
+                      fontFamily: "monospace",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: "8px",
+                      color: "#ffffff"
+                    }}
+                    value={decryptedAccount || "••••••••••••••••••••••••••••"}
+                  />
+
+                  {selectedInvoice.status !== 'completed' && !decryptedAccount && (
+                    <button
+                      onClick={() => handleDecryptBank(selectedInvoice.id)}
+                      disabled={decrypting}
+                      style={{
+                        background: "#ffffff",
+                        color: "#000000",
+                        border: "none",
+                        padding: "0.4rem 1rem",
+                        borderRadius: "100px",
+                        fontSize: "0.75rem",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        textTransform: "uppercase"
+                      }}
+                    >
+                      {decrypting ? "Decrypting..." : "Reveal IBAN"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Settlement form */}
+            {selectedInvoice.status !== 'completed' ? (
+              <div>
+                <div className="form-group" style={{ marginBottom: "1rem" }}>
+                  <label className="form-label" style={{ fontWeight: 600, color: "#cbd5e1", fontSize: "0.85rem", display: "block", marginBottom: "0.5rem" }}>Binance TXN ID / Wire Reference *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Enter the wire transaction receipt reference code"
+                    style={{ padding: "0.6rem 0.8rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", width: "100%", background: "rgba(255,255,255,0.02)", color: "white" }}
+                    value={referenceNumber}
+                    onChange={(e) => setReferenceNumber(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: "1.5rem" }}>
+                  <label className="form-label" style={{ color: "#cbd5e1", fontSize: "0.85rem", display: "block", marginBottom: "0.5rem" }}>Settlement Internal Notes (Optional)</label>
+                  <textarea
+                    className="form-input"
+                    rows={2}
+                    placeholder="e.g. Cleared manual bank wire SEPA transfer."
+                    style={{ padding: "0.6rem 0.8rem", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", width: "100%", background: "rgba(255,255,255,0.02)", color: "white", fontFamily: "inherit" }}
+                    value={settleNotes}
+                    onChange={(e) => setSettleNotes(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button
+                    onClick={handleConfirmSettlement}
+                    disabled={settling}
+                    style={{
+                      flex: 1,
+                      background: "#10b981",
+                      color: "white",
+                      border: "none",
+                      padding: "0.8rem",
+                      borderRadius: "100px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      textTransform: "uppercase",
+                      fontSize: "0.8rem",
+                      letterSpacing: "0.05em"
+                    }}
+                  >
+                    {settling ? "Confirming Release..." : "Release Payout & Settle Invoice"}
+                  </button>
+
+                  <button
+                    onClick={() => { setSelectedInvoice(null); setDecryptedAccount(""); }}
+                    style={{
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.05)",
+                      color: "#cbd5e1",
+                      padding: "0.8rem 1.2rem",
+                      borderRadius: "100px",
+                      fontWeight: 600,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.15)", padding: "1.25rem", borderRadius: "12px", fontSize: "0.85rem", color: "#4ade80", lineHeight: 1.5 }}>
+                <strong>🔒 Audit Confirmed</strong>: This transaction has been fully completed. The local bank wire was successfully released.
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic CNIC Review Modal Popover overlay */}
+      {selectedReviewUser && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+          <div style={{ background: "#08080a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "24px", padding: "2.5rem", maxWidth: "700px", width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 30px 100px rgba(0,0,0,0.9)", position: "relative", color: "#ffffff" }}>
+
+            <button
+              onClick={() => setSelectedReviewUser(null)}
+              style={{ position: "absolute", top: "1.5rem", right: "1.5rem", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#64748b" }}
+            >
+              &times;
+            </button>
+
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: "0.5rem" }}>
+              Identity Verification Review (CNIC)
+            </h2>
+            <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "0 0 1.5rem 0" }}>
+              Review user uploaded CNIC documents and verify registration details.
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
+              <div>
+                <span style={{ color: "#64748b" }}>Full Name:</span>
+                <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedReviewUser.name || 'N/A'}</div>
+              </div>
+              <div>
+                <span style={{ color: "#64748b" }}>Email Address:</span>
+                <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedReviewUser.email}</div>
+              </div>
+            </div>
+
+            {/* Document Images Display */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "2rem" }}>
+              <div>
+                <span style={{ color: "#cbd5e1", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem", letterSpacing: "0.05em" }}>CNIC Front Side</span>
+                <div style={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", overflow: "hidden", background: "rgba(255,255,255,0.01)", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  {selectedReviewUser.cnic_front ? (
+                    <img
+                      src={selectedReviewUser.cnic_front}
+                      alt="CNIC Front Document"
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                    />
+                  ) : (
+                    <span style={{ color: "#64748b", fontSize: "0.85rem" }}>No Front Image Uploaded</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: "#cbd5e1", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem", letterSpacing: "0.05em" }}>CNIC Back Side</span>
+                <div style={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", overflow: "hidden", background: "rgba(255,255,255,0.01)", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  {selectedReviewUser.cnic_back ? (
+                    <img
+                      src={selectedReviewUser.cnic_back}
+                      alt="CNIC Back Document"
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                    />
+                  ) : (
+                    <span style={{ color: "#64748b", fontSize: "0.85rem" }}>No Back Image Uploaded</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: "#cbd5e1", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem", letterSpacing: "0.05em" }}>Selfie (SN)</span>
+                <div style={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", overflow: "hidden", background: "rgba(255,255,255,0.01)", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  {selectedReviewUser.selfie ? (
+                    <img
+                      src={selectedReviewUser.selfie}
+                      alt="Selfie"
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                    />
+                  ) : (
+                    <span style={{ color: "#64748b", fontSize: "0.85rem" }}>No Selfie Uploaded</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => handleReject(selectedReviewUser)}
+                style={{
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  background: "rgba(239,68,68,0.05)",
+                  color: "#f87171",
+                  padding: "0.75rem 1.5rem",
+                  borderRadius: "100px",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  textTransform: "uppercase"
+                }}
               >
-                &times;
+                Reject Application
               </button>
-
-              <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: "0.5rem" }}>
-                Identity Verification Review (CNIC)
-              </h2>
-              <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "0 0 1.5rem 0" }}>
-                Review user uploaded CNIC documents and verify registration details.
-              </p>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
-                <div>
-                  <span style={{ color: "#64748b" }}>Full Name:</span>
-                  <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedReviewUser.name || 'N/A'}</div>
-                </div>
-                <div>
-                  <span style={{ color: "#64748b" }}>Email Address:</span>
-                  <div style={{ fontWeight: 600, color: "#ffffff" }}>{selectedReviewUser.email}</div>
-                </div>
-              </div>
-
-              {/* Document Images Display */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "2rem" }}>
-                <div>
-                  <span style={{ color: "#cbd5e1", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem", letterSpacing: "0.05em" }}>CNIC Front Side</span>
-                  <div style={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", overflow: "hidden", background: "rgba(255,255,255,0.01)", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    {selectedReviewUser.cnic_front ? (
-                      <img 
-                        src={selectedReviewUser.cnic_front} 
-                        alt="CNIC Front Document" 
-                        style={{ width: "100%", height: "100%", objectFit: "contain" }} 
-                      />
-                    ) : (
-                      <span style={{ color: "#64748b", fontSize: "0.85rem" }}>No Front Image Uploaded</span>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ color: "#cbd5e1", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem", letterSpacing: "0.05em" }}>CNIC Back Side</span>
-                  <div style={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", overflow: "hidden", background: "rgba(255,255,255,0.01)", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    {selectedReviewUser.cnic_back ? (
-                      <img 
-                        src={selectedReviewUser.cnic_back} 
-                        alt="CNIC Back Document" 
-                        style={{ width: "100%", height: "100%", objectFit: "contain" }} 
-                      />
-                    ) : (
-                      <span style={{ color: "#64748b", fontSize: "0.85rem" }}>No Back Image Uploaded</span>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ color: "#cbd5e1", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "0.5rem", letterSpacing: "0.05em" }}>Selfie (SN)</span>
-                  <div style={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", overflow: "hidden", background: "rgba(255,255,255,0.01)", height: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    {selectedReviewUser.selfie ? (
-                      <img 
-                        src={selectedReviewUser.selfie} 
-                        alt="Selfie" 
-                        style={{ width: "100%", height: "100%", objectFit: "contain" }} 
-                      />
-                    ) : (
-                      <span style={{ color: "#64748b", fontSize: "0.85rem" }}>No Selfie Uploaded</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
-                <button 
-                  onClick={() => handleReject(selectedReviewUser)}
-                  style={{ 
-                    border: "1px solid rgba(239,68,68,0.2)", 
-                    background: "rgba(239,68,68,0.05)", 
-                    color: "#f87171", 
-                    padding: "0.75rem 1.5rem", 
-                    borderRadius: "100px", 
-                    fontSize: "0.8rem", 
-                    fontWeight: 700, 
-                    cursor: "pointer",
-                    textTransform: "uppercase"
-                  }}
-                >
-                  Reject Application
-                </button>
-                <button 
-                  onClick={() => handleApprove(selectedReviewUser)}
-                  style={{ 
-                    border: "none", 
-                    background: "#10b981", 
-                    color: "white", 
-                    padding: "0.75rem 1.5rem", 
-                    borderRadius: "100px", 
-                    fontSize: "0.8rem", 
-                    fontWeight: 800, 
-                    cursor: "pointer",
-                    textTransform: "uppercase"
-                  }}
-                >
-                  Approve Verification
-                </button>
-              </div>
-
+              <button
+                onClick={() => handleApprove(selectedReviewUser)}
+                style={{
+                  border: "none",
+                  background: "#10b981",
+                  color: "white",
+                  padding: "0.75rem 1.5rem",
+                  borderRadius: "100px",
+                  fontSize: "0.8rem",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  textTransform: "uppercase"
+                }}
+              >
+                Approve Verification
+              </button>
             </div>
+
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Tab 4: Create User */}
-        {activeTab === "create-admin" && (
-          <div className="tab-container" style={{ maxWidth: "600px", margin: "0 auto" }}>
-            <div className="section-card">
-              <h2 className="section-title">Create Admin Account</h2>
-              <p className="section-subtitle">Provision a new administrator account.</p>
-              
-              {createUserMsg.text && (
-                <div style={{ 
-                  padding: "1rem", 
-                  borderRadius: "0.5rem", 
-                  marginBottom: "1.5rem", 
-                  backgroundColor: createUserMsg.type === "success" ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                  color: createUserMsg.type === "success" ? "#4ade80" : "#f87171",
-                  border: `1px solid ${createUserMsg.type === "success" ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)"}`,
-                  fontSize: "0.9rem"
-                }}>
-                  {createUserMsg.text}
-                </div>
-              )}
+      {/* Tab 4: Create User */}
+      {activeTab === "create-admin" && (
+        <div className="tab-container" style={{ maxWidth: "600px", margin: "0 auto" }}>
+          <div className="section-card">
+            <h2 className="section-title">Create Admin Account</h2>
+            <p className="section-subtitle">Provision a new administrator account.</p>
 
-              <form onSubmit={handleCreateAdmin} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                <div className="form-group">
-                  <label className="login-label">Full Name</label>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="John Doe" 
-                    className="login-input" 
-                    value={newUserName}
-                    onChange={(e) => setNewUserName(e.target.value)}
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "white" }}
-                  />
-                </div>
+            {createUserMsg.text && (
+              <div style={{
+                padding: "1rem",
+                borderRadius: "0.5rem",
+                marginBottom: "1.5rem",
+                backgroundColor: createUserMsg.type === "success" ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                color: createUserMsg.type === "success" ? "#4ade80" : "#f87171",
+                border: `1px solid ${createUserMsg.type === "success" ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)"}`,
+                fontSize: "0.9rem"
+              }}>
+                {createUserMsg.text}
+              </div>
+            )}
 
-                <div className="form-group">
-                  <label className="login-label">Email Address</label>
-                  <input 
-                    type="email" 
-                    required 
-                    placeholder="user@example.com" 
-                    className="login-input" 
-                    value={newUserEmail}
-                    onChange={(e) => setNewUserEmail(e.target.value)}
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "white" }}
-                  />
-                </div>
+            <form onSubmit={handleCreateAdmin} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              <div className="form-group">
+                <label className="login-label">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="John Doe"
+                  className="login-input"
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "white" }}
+                />
+              </div>
 
-                <div className="form-group">
-                  <label className="login-label">Initial Password</label>
-                  <input 
-                    type="password" 
-                    required 
-                    placeholder="••••••••••••" 
-                    className="login-input" 
-                    value={newUserPassword}
-                    onChange={(e) => setNewUserPassword(e.target.value)}
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "white" }}
-                  />
-                </div>
+              <div className="form-group">
+                <label className="login-label">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="user@example.com"
+                  className="login-input"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "white" }}
+                />
+              </div>
 
-                <button 
-                  type="submit" 
-                  disabled={creatingUser} 
-                  className="login-btn"
-                  style={{ marginTop: "1rem" }}
-                >
-                  {creatingUser ? "Provisioning..." : "Create Admin Account"}
-                </button>
-              </form>
-            </div>
+              <div className="form-group">
+                <label className="login-label">Initial Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••••••"
+                  className="login-input"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "white" }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={creatingUser}
+                className="login-btn"
+                style={{ marginTop: "1rem" }}
+              >
+                {creatingUser ? "Provisioning..." : "Create Admin Account"}
+              </button>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </div>
   );
 }
