@@ -40,7 +40,12 @@ function KYCContent() {
   const otpEmail = (emailFromQuery || user?.email || "").trim().toLowerCase();
 
   // KYC Upload States
-  ...
+  const [cnicFrontFile, setCnicFrontFile] = useState<File | null>(null);
+  const [cnicBackFile, setCnicBackFile] = useState<File | null>(null);
+  const [selfieFile, setSelfieFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [msg, setMsg] = useState({ type: "", text: "" });
+  const [showPopup, setShowPopup] = useState(false);
   const selfiePreview = useMemo(() => (selfieFile ? URL.createObjectURL(selfieFile) : null), [selfieFile]);
 
   // Helper to update user profile once email is verified

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect, useMemo } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import "./admin.css";
 import { supabase } from "@/lib/supabase/client";
 
@@ -41,7 +43,11 @@ export default function AdminDashboardPage() {
   const [dataLoadError, setDataLoadError] = useState("");
 
   const [showBootstrapAdmin, setShowBootstrapAdmin] = useState(false);
-  ...
+  const [bootstrapEmail, setBootstrapEmail] = useState("");
+  const [bootstrapName, setBootstrapName] = useState("");
+  const [bootstrapPassword, setBootstrapPassword] = useState("");
+  const [bootstrapOtp, setBootstrapOtp] = useState("");
+  const [bootstrapOtpSent, setBootstrapOtpSent] = useState(false);
   const [bootstrapLoading, setBootstrapLoading] = useState(false);
 
   const [email, setEmail] = useState("");
