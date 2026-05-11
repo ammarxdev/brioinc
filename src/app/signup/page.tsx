@@ -196,6 +196,10 @@ export default function SignupPage() {
             <button type="submit" className="submit-btn" disabled={loading || !termsAccepted}>
               {loading ? "Processing..." : "Create Account"}
             </button>
+
+            <p className="bottom-link">
+              Already have an account? <Link href="/login">Sign in</Link>
+            </p>
           </form>
         </div>
       </main>
@@ -212,42 +216,42 @@ export default function SignupPage() {
           box-shadow: inset 0 0 150px 50px #000;
           z-index: 1;
         }
-        .logo-container { position: absolute; top: 40px; left: 40px; display: flex; align-items: center; gap: 12px; z-index: 10; }
-        .logo-text { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.04em; }
-        .logo-icon { width: 32px; height: 32px; }
+        .logo-container { position: absolute; top: 32px; left: 32px; display: flex; align-items: center; gap: 12px; z-index: 10; }
+        .logo-text { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.04em; color: white; }
+        .logo-icon { width: 28px; height: 28px; stroke: white; }
 
-        .form-page-main { padding: 140px 20px 80px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .signup-glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(40px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 3rem; border-radius: 2.5rem; width: 100%; max-width: 600px; box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5); }
-        h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.04em; }
+        .form-page-main { padding: 120px 20px 80px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .signup-glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(40px); border: 1px solid rgba(255, 255, 255, 0.08); padding: 3rem; border-radius: 2rem; width: 100%; max-width: 600px; box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6); }
+        h1 { font-size: 2.25rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.04em; }
         .subtitle { color: #94a3b8; margin-bottom: 2.5rem; }
         
-        .error-alert { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem; font-size: 0.9rem; }
-        .success-alert { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #4ade80; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem; font-size: 0.9rem; }
+        .error-alert { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem; font-size: 0.85rem; }
+        .success-alert { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #4ade80; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem; font-size: 0.85rem; }
 
-        .form-group { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+        .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
         .form-row { display: flex; gap: 1.5rem; width: 100%; }
-        label { font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
-        input:not([type="checkbox"]), select { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 1rem; color: white; font-size: 1rem; width: 100%; }
-        input:focus { outline: none; border-color: white; background: rgba(255, 255, 255, 0.1); }
+        label { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        input:not([type="checkbox"]), select { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 1rem; color: white; font-size: 0.95rem; width: 100%; transition: all 0.2s; }
+        input:focus { outline: none; border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.08); }
 
-        .verification-glass { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); padding: 1.5rem; border-radius: 1.5rem; margin: 2rem 0; }
-        .otp-row { display: flex; gap: 0.75rem; margin-top: 0.75rem; }
-        .send-otp-btn { background: white; color: black; border: none; border-radius: 1rem; padding: 0 1.5rem; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
-        .send-otp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .otp-inputs { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; }
-        .otp-box { width: 3.5rem !important; height: 3.5rem; text-align: center; font-weight: 700; font-size: 1.2rem !important; }
-
-        .checkbox-group { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2.5rem; }
-        .checkbox-group a { color: white; text-decoration: underline; }
+        .checkbox-group { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2.5rem; font-size: 0.9rem; color: #94a3b8; }
+        .checkbox-group a { color: white; font-weight: 600; text-decoration: underline; }
         
-        .submit-btn { background: white; color: black; border: none; border-radius: 100px; padding: 1.25rem; width: 100%; font-weight: 800; cursor: pointer; font-size: 1rem; transition: all 0.3s; }
-        .submit-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(255,255,255,0.2); }
+        .submit-btn { background: white; color: black; border: none; border-radius: 100px; padding: 1.1rem; width: 100%; font-weight: 800; cursor: pointer; font-size: 1rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(255,255,255,0.15); }
+
+        .bottom-link { text-align: center; margin-top: 2rem; color: #64748b; font-size: 0.85rem; }
+        .bottom-link a { color: #ffffff; font-weight: 700; text-decoration: none; margin-left: 0.5rem; }
+        .bottom-link a:hover { text-decoration: underline; }
 
         @media (max-width: 768px) {
-          .signup-glass-card { padding: 2rem; border-radius: 2rem; }
+          .logo-container { top: 24px; left: 24px; }
+          .logo-text { font-size: 1.25rem; }
+          .logo-icon { width: 24px; height: 24px; }
+          .form-page-main { padding-top: 100px; }
+          .signup-glass-card { padding: 2.5rem 1.5rem; border-radius: 1.5rem; }
+          h1 { font-size: 1.85rem; }
           .form-row { flex-direction: column; gap: 0; }
-          .logo-container { top: 20px; left: 20px; }
-          h1 { font-size: 2rem; }
         }
       `}</style>
     </div>
