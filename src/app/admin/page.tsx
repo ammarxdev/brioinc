@@ -63,16 +63,21 @@ export default function AdminDashboardPage() {
 
   const checkAdminAuth = async () => {
     try {
+      console.log("Admin auth check: starting...");
       setCheckingAuth(true);
 
+      console.log("Admin auth check: getting session...");
       const { data: { session } } = await supabase.auth.getSession();
+      console.log("Admin auth check: session found?", !!session);
       
       if (!session?.user) {
+        console.log("Admin auth check: no session user, showing login form.");
         setIsAdmin(false);
         setCheckingAuth(false);
         return;
       }
 
+      console.log("Admin auth check: querying users table for role...");
       // Check role in public.users table
       const { data, error } = await supabase
         .from("users")
@@ -80,17 +85,22 @@ export default function AdminDashboardPage() {
         .eq("id", session.user.id)
         .maybeSingle();
 
+      console.log("Admin auth check: users table query response:", { data, error });
+
       if (error || data?.role !== "admin") {
+        console.log("Admin auth check: user is not an admin or error occurred.");
         setIsAdmin(false);
       } else {
+        console.log("Admin auth check: user IS an admin, loading dashboard data...");
         setAdminUser(session.user);
         setIsAdmin(true);
         fetchInitialData();
       }
     } catch (err) {
-      console.error("Auth check failed:", err);
+      console.error("Admin auth check failed with exception:", err);
       setIsAdmin(false);
     } finally {
+      console.log("Admin auth check: finished, setting checkingAuth to false.");
       setCheckingAuth(false);
     }
   };
@@ -278,14 +288,22 @@ export default function AdminDashboardPage() {
   };
 
   const fetchInitialData = async () => {
+    console.log("fetchInitialData: starting...");
     setLoading(true);
     setDataLoadError("");
-    await Promise.all([
-      fetchPendingUsers(),
-      fetchInvoices(),
-      fetchAuditLogs()
-    ]);
-    setLoading(false);
+    try {
+      await Promise.all([
+        fetchPendingUsers(),
+        fetchInvoices(),
+        fetchAuditLogs()
+      ]);
+      console.log("fetchInitialData: successfully loaded all data.");
+    } catch (err) {
+      console.error("fetchInitialData: failed to load data:", err);
+    } finally {
+      setLoading(false);
+      console.log("fetchInitialData: finished.");
+    }
   };
 
   const fetchPendingUsers = async () => {
