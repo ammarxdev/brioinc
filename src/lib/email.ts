@@ -224,7 +224,7 @@ export const sendInvoiceCreatedEmail = async ({
           </div>
 
           <div style="text-align: center; margin-bottom: 32px;">
-            <a href="${payLink}" style="display: inline-block; background: #ffffff; color: #000000; font-weight: 700; padding: 16px 40px; border-radius: 100px; text-decoration: none; font-size: 16px; box-shadow: 0 4px 20px rgba(255,255,255,0.15); transition: transform 0.2s;">
+            <a href="${checkoutUrl || payLink}" style="display: inline-block; background: #ffffff; color: #000000; font-weight: 700; padding: 16px 40px; border-radius: 100px; text-decoration: none; font-size: 16px; box-shadow: 0 4px 20px rgba(255,255,255,0.15); transition: transform 0.2s;">
               Review & Pay Invoice
             </a>
           </div>
