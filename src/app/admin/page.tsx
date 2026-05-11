@@ -445,7 +445,7 @@ export default function AdminDashboardPage() {
 
   // Secure Decrypt Bank Details Trigger
   const handleDecryptBank = async (invoiceId: string) => {
-    if (!adminUser) return;
+    if (!authUser) return;
 
     try {
       setDecrypting(true);
