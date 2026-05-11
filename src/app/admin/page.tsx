@@ -1,11 +1,11 @@
 "use client";
 
 import "./admin.css";
-import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 
 
 export default function AdminDashboardPage() {
+  const { user: authUser, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"users" | "invoices" | "audit" | "create-admin">("users");
 
@@ -38,70 +38,48 @@ export default function AdminDashboardPage() {
   const [createUserMsg, setCreateUserMsg] = useState({ type: "", text: "" });
 
   // Auth state variables
-  const [adminUser, setAdminUser] = useState<any | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [dataLoadError, setDataLoadError] = useState("");
+
+  const [showBootstrapAdmin, setShowBootstrapAdmin] = useState(false);
+  ...
+  const [bootstrapLoading, setBootstrapLoading] = useState(false);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginInfo, setLoginInfo] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
-  const [dataLoadError, setDataLoadError] = useState("");
-
-  const [showBootstrapAdmin, setShowBootstrapAdmin] = useState(false);
-  const [bootstrapName, setBootstrapName] = useState("");
-  const [bootstrapEmail, setBootstrapEmail] = useState("");
-  const [bootstrapPassword, setBootstrapPassword] = useState("");
-  const [bootstrapOtp, setBootstrapOtp] = useState("");
-  const [bootstrapOtpSent, setBootstrapOtpSent] = useState(false);
-  const [bootstrapLoading, setBootstrapLoading] = useState(false);
+  const isAdmin = useMemo(() => authUser?.role === "admin", [authUser]);
 
   useEffect(() => {
-    checkAdminAuth();
-  }, []);
+    if (isAdmin) {
+      fetchInitialData();
+    }
+  }, [isAdmin]);
 
-  const checkAdminAuth = async () => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError("");
+    setLoginInfo("");
+
     try {
-      console.log("Admin auth check: starting...");
-      setCheckingAuth(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      console.log("Admin auth check: getting session...");
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("Admin auth check: session found?", !!session);
+      if (error) throw error;
+      if (!data?.session) throw new Error("Login failed. No session returned.");
       
-      if (!session?.user) {
-        console.log("Admin auth check: no session user, showing login form.");
-        setIsAdmin(false);
-        setCheckingAuth(false);
-        return;
-      }
-
-      console.log("Admin auth check: querying users table for role...");
-      // Check role in public.users table
-      const { data, error } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      console.log("Admin auth check: users table query response:", { data, error });
-
-      if (error || data?.role !== "admin") {
-        console.log("Admin auth check: user is not an admin or error occurred.");
-        setIsAdmin(false);
-      } else {
-        console.log("Admin auth check: user IS an admin, loading dashboard data...");
-        setAdminUser(session.user);
-        setIsAdmin(true);
-        fetchInitialData();
-      }
-    } catch (err) {
-      console.error("Admin auth check failed with exception:", err);
-      setIsAdmin(false);
+      // The useAuth hook will detect the session change and handle the rest
+      setLoginInfo("Authentication successful. Redirecting...");
+    } catch (err: any) {
+      console.error("Admin login failed:", err);
+      setLoginError(err.message || "Failed to sign in.");
     } finally {
-      console.log("Admin auth check: finished, setting checkingAuth to false.");
-      setCheckingAuth(false);
+      setLoginLoading(false);
     }
   };
 
@@ -613,7 +591,7 @@ export default function AdminDashboardPage() {
     return matchesSearch && matchesStatus;
   });
 
-  if (checkingAuth || isAdmin === null) {
+  if (authLoading || (authUser && isAdmin === null)) {
     return (
       <div className="admin-login-bg" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: '1.5rem' }}>
         <div className="spinner"></div>

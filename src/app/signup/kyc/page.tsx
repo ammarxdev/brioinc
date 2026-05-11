@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { useMemo, useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -12,7 +12,23 @@ import Footer from "@/components/Footer";
 function KYCContent() {
   const { user, loading } = useAuth();
   const searchParams = useSearchParams();
-  const [step, setStep] = useState(user ? 2 : 1); // If user is already logged in, they've verified their email, so start at Step 2.
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+
+  // Update step and handle approved redirect
+  useEffect(() => {
+    if (!loading) {
+      if (user?.status === "approved") {
+        router.replace("/dashboard");
+        return;
+      }
+      if (user) {
+        setStep(2);
+      } else {
+        setStep(1);
+      }
+    }
+  }, [user, loading, router]);
   
   // OTP States
   const [otpCode, setOtpCode] = useState("");
