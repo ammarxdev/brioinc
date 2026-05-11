@@ -46,7 +46,13 @@ function KYCContent() {
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState({ type: "", text: "" });
   const [showPopup, setShowPopup] = useState(false);
+  const cnicFrontPreview = useMemo(() => (cnicFrontFile ? URL.createObjectURL(cnicFrontFile) : null), [cnicFrontFile]);
+  const cnicBackPreview = useMemo(() => (cnicBackFile ? URL.createObjectURL(cnicBackFile) : null), [cnicBackFile]);
   const selfiePreview = useMemo(() => (selfieFile ? URL.createObjectURL(selfieFile) : null), [selfieFile]);
+
+  const frontInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
+  const selfieInputRef = useRef<HTMLInputElement>(null);
 
   // Helper to update user profile once email is verified
   const syncProfile = useCallback(async (userId: string) => {
