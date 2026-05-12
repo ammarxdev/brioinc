@@ -24,18 +24,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const fetchingRef = useRef<boolean>(false);
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
     // Listen for auth changes - this also fires INITIAL_SESSION event
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state change event:", event, !!session);
+
       if (!mounted) return;
       
       if (session?.user) {
-        await fetchUserProfile(session.user.id, session.user.email, session.user.user_metadata);
+        // Only fetch if the user ID has changed or if we don't have a user yet
+        if (userIdRef.current !== session.user.id) {
+          userIdRef.current = session.user.id;
+          await fetchUserProfile(session.user.id, session.user.email, session.user.user_metadata);
+        }
       } else {
+        userIdRef.current = null;
         setUser(null);
         setLoading(false);
       }
@@ -45,23 +51,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, []); // No need for user.id dependency anymore
 
   async function fetchUserProfile(userId: string, email: string | undefined, userMetadata?: any) {
     if (fetchingRef.current) return;
     fetchingRef.current = true;
-    console.log("fetchUserProfile: starting for", userId);
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching user profile", error);
+    
+    let retries = 0;
+    const maxRetries = 3;
+    let data = null;
+    let error = null;
+
+    try {
+      while (retries < maxRetries) {
+        const result = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle();
+        
+        data = result.data;
+        error = result.error;
+
+        // If it's a lock error, wait and retry
+        if (error && error.message?.includes("stole it")) {
+          retries++;
+
+          await new Promise(resolve => setTimeout(resolve, 200 * retries));
+          continue;
+        }
+
+        // If no error or not a lock error, break the loop
+        break;
       }
-      console.log("fetchUserProfile: database result", !!data);
+
+
 
       const metadataName = userMetadata?.name || null;
 
@@ -95,9 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             role: "user",
           });
 
-          if (insertError) {
-            console.error("Failed to create user profile row", insertError);
-          }
+
         }
 
         setUser({
@@ -111,11 +134,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
       }
     } catch (err) {
-      console.error("Error fetching user profile", err);
+
     } finally {
       fetchingRef.current = false;
       setLoading(false);
-      console.log("fetchUserProfile: finished and loading set to false");
+
     }
   }
 

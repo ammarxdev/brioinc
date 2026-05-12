@@ -49,7 +49,6 @@ export async function POST(req: Request) {
       .eq("is_current", true);
 
     if (clearCurrentErr) {
-      console.error("clearCurrentErr:", clearCurrentErr);
       return NextResponse.json({ 
         error: `Failed to submit KYC (clear current): ${clearCurrentErr.message || JSON.stringify(clearCurrentErr)}` 
       }, { status: 500 });
@@ -71,7 +70,6 @@ export async function POST(req: Request) {
       .single();
 
     if (insertErr) {
-      console.error("insertErr:", insertErr);
       return NextResponse.json({ 
         error: `Failed to submit KYC (insert): ${insertErr.message || JSON.stringify(insertErr)}` 
       }, { status: 500 });
@@ -88,7 +86,6 @@ export async function POST(req: Request) {
       .eq("id", requestUser.id);
 
     if (userUpdateErr) {
-      console.error("userUpdateErr:", userUpdateErr);
       return NextResponse.json({ 
         error: `Failed to update user status to pending: ${userUpdateErr.message || JSON.stringify(userUpdateErr)}` 
       }, { status: 500 });
@@ -104,7 +101,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, submissionId: submission.id });
   } catch (error: any) {
-    console.error("KYC submission route error:", error);
+
     return NextResponse.json({ error: error?.message || "Internal Server Error during KYC submission" }, { status: 500 });
   }
 }

@@ -66,7 +66,7 @@ export default function PublicInvoicePayPage({ params }: PayPageProps) {
           : prev
       );
     } catch (err: any) {
-      console.error("Crypto payment creation error:", err);
+
       setCryptoError(err?.message || "Failed to create crypto payment.");
     } finally {
       setCryptoCreating(false);
@@ -100,7 +100,7 @@ export default function PublicInvoicePayPage({ params }: PayPageProps) {
           setInvoice((prev: any) => prev ? { ...prev, status: data.status } : null);
         }
       } catch (err) {
-        console.warn("Status poll error:", err);
+
       }
     }, 5000); // Poll every 5 seconds
 
@@ -114,7 +114,7 @@ export default function PublicInvoicePayPage({ params }: PayPageProps) {
       const data = await res.json();
 
       if (!data?.success || !data.invoice) {
-        console.error("Failed to load invoice:", data?.error);
+
         setLoading(false);
         return;
       }
@@ -127,7 +127,7 @@ export default function PublicInvoicePayPage({ params }: PayPageProps) {
         setPolling(false);
       }
     } catch (err) {
-      console.error(err);
+
     } finally {
       setLoading(false);
     }

@@ -55,7 +55,7 @@ export default function Topbar() {
       if (error) throw error;
       setNotifications(data || []);
     } catch (err) {
-      console.error("Error fetching notifications:", err);
+
     }
   }, [user?.id]);
 
@@ -98,7 +98,7 @@ export default function Topbar() {
       if (error) throw error;
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     } catch (err) {
-      console.error("Error marking as read:", err);
+
     }
   };
 
@@ -112,7 +112,7 @@ export default function Topbar() {
       if (error) throw error;
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
     } catch (err) {
-      console.error("Error marking notification as read:", err);
+
     }
   };
 

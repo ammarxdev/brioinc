@@ -29,7 +29,7 @@ export default function TransactionsPage() {
       if (error) throw error;
       setTransactions(data || []);
     } catch (err) {
-      console.error("Error fetching transactions:", err);
+
     } finally {
       setLoading(false);
     }

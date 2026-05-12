@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing email or action' }, { status: 400 });
     }
 
-    console.log(`Email request: action=${action}, to=${email}`);
+
 
     switch (action) {
       case 'otp':
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       message: `Email sent successfully for action: ${action}` 
     });
   } catch (error: any) {
-    console.error('Email API Error:', error);
+
     return NextResponse.json({ 
       error: error.message || 'An unexpected error occurred while sending the email' 
     }, { status: 500 });

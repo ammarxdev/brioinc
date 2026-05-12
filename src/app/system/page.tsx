@@ -19,13 +19,13 @@ export default function SystemDashboardPage() {
         setLatency(end - start);
 
         if (error) {
-          console.error("DB Connection Error:", error);
+
           setDbStatus("error");
         } else {
           setDbStatus("connected");
         }
       } catch (err) {
-        console.error("Unexpected Error:", err);
+
         setDbStatus("error");
       }
     };

@@ -54,7 +54,7 @@ export default function OverviewPage() {
       setRecentInvoices(invData || []);
       setCards(cardData || []);
     } catch (err) {
-      console.error("Dashboard fetch error:", err);
+
     } finally {
       setLoading(false);
     }

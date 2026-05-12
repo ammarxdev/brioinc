@@ -61,7 +61,7 @@ export async function createNowPaymentsInvoice({
       createdAt: response.data.created_at,
     };
   } catch (error: any) {
-    console.error('NowPayments API createInvoice Error:', error.response?.data || error.message);
+
 
     const isProduction = process.env.NODE_ENV === 'production';
     if (isProduction) {
@@ -134,7 +134,7 @@ export async function createNowPaymentsPayment({
       invoiceId: response.data.invoice_id,
     };
   } catch (error: any) {
-    console.error('NowPayments API createPayment Error:', error.response?.data || error.message);
+
 
     return {
       success: false,
@@ -174,7 +174,7 @@ export function verifyNowPaymentsSignature(
     if (calculatedSignature.length !== receivedSignature.length) return false;
     return crypto.timingSafeEqual(Buffer.from(calculatedSignature, 'hex'), Buffer.from(receivedSignature, 'hex'));
   } catch (error) {
-    console.error('Signature verification error:', error);
+
     return false;
   }
 }
@@ -198,7 +198,7 @@ export async function getNowPaymentsInvoiceStatus(invoiceId: string) {
       pay_currency: response.data.pay_currency,
     };
   } catch (error: any) {
-    console.error(`Error checking NowPayments status for ${invoiceId}:`, error.message);
+
     return {
       success: false,
       status: 'unknown',

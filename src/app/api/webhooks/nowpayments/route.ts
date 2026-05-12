@@ -57,13 +57,9 @@ export async function POST(req: Request) {
     const isSignatureValid = verifyNowPaymentsSignature(body, signature);
     
     // In production, we strictly require valid signatures. 
-    // If not in production or we are mocking, we print a warning but allow it for developer testing.
     const isProduction = process.env.NODE_ENV === 'production';
     if (!isSignatureValid && isProduction) {
-      console.error('NOWPayments Webhook Signature Invalid');
       return NextResponse.json({ error: 'Signature Verification Failed' }, { status: 401 });
-    } else if (!isSignatureValid) {
-      console.warn('NOWPayments Webhook Signature Invalid - Proceeding in development mode.');
     }
 
     const paymentId = body.payment_id;
@@ -76,7 +72,6 @@ export async function POST(req: Request) {
     }
 
     // 2. Webhook Event Log & Deduplication
-    // Insert unique event_id into webhook_events. If it fails with constraint, we've already processed this exact status update.
     const { error: eventError } = await supabaseSystem
       .from('webhook_events')
       .insert([
@@ -88,14 +83,10 @@ export async function POST(req: Request) {
       ]);
 
     if (eventError) {
-      if (eventError.code === '23505') { // Postgres code for UNIQUE_VIOLATION
-        console.log(`Webhook Event ${eventId} already processed. Ignoring replay.`);
+      if (eventError.code === '23505') { // UNIQUE_VIOLATION
         return NextResponse.json({ success: true, message: 'Duplicate event ignored' });
       }
-      console.error('Failed to log webhook event:', eventError);
     }
-
-    console.log(`Processing NowPayments Webhook for Invoice ${orderId}, status=${paymentStatus}`);
 
     const { payment: internalPaymentStatus, invoice: internalInvoiceStatus } = mapNowPaymentsStatusToInternal(paymentStatus);
 
@@ -107,7 +98,6 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (fetchError || !invoiceData) {
-      console.error(`Invoice not found for number: ${orderId}`);
       return NextResponse.json({ error: 'Associated invoice not found' }, { status: 404 });
     }
 
@@ -134,10 +124,8 @@ export async function POST(req: Request) {
       .eq('provider', 'nowpayments')
       .select('id');
 
-    if (paymentUpdateErr) {
-      console.error('Failed to update payment record:', paymentUpdateErr);
-    } else if (!paymentUpdateData || paymentUpdateData.length === 0) {
-      const { error: insertPaymentErr } = await supabaseSystem
+    if (!paymentUpdateErr && (!paymentUpdateData || paymentUpdateData.length === 0)) {
+      await supabaseSystem
         .from('payments')
         .insert([
           {
@@ -160,10 +148,6 @@ export async function POST(req: Request) {
             updated_at: new Date().toISOString(),
           }
         ]);
-
-      if (insertPaymentErr) {
-        console.error('Failed to insert missing payment record:', insertPaymentErr);
-      }
     }
 
     // 5. Update invoice record
@@ -218,15 +202,12 @@ export async function POST(req: Request) {
           amount: Number(invoiceData.amount),
           currency: invoiceData.currency || 'USD',
           invoiceNumber: invoiceData.invoice_number,
-        }).catch((emailErr: any) => {
-          console.warn('Payment success notification email failed asynchronously:', emailErr.message);
-        });
+        }).catch(() => {});
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Webhook processing exception:', error);
     return NextResponse.json({ error: 'Internal server error processing webhook' }, { status: 500 });
   }
 }

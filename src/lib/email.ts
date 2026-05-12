@@ -30,7 +30,7 @@ async function logEmailEvent(recipient: string, subject: string, action: string,
       }
     ]);
   } catch (err) {
-    console.warn('System failed to log email event:', err);
+    //
   }
 }
 

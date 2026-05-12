@@ -32,7 +32,7 @@ export function encrypt(text: string): string {
     
     return `${iv.toString('hex')}:${encrypted}:${authTag}`;
   } catch (error) {
-    console.error('AES-256-GCM Encryption error:', error);
+
     throw new Error('Data encryption failure');
   }
 }
@@ -66,7 +66,7 @@ export function decrypt(cipherText: string): string {
     
     return decrypted;
   } catch (error) {
-    console.error('AES-256-GCM Decryption error:', error);
+
     return 'Decryption Failure (Secret mismatch)';
   }
 }

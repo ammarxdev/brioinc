@@ -166,7 +166,7 @@ export async function POST(req: Request) {
       payLink: payPageUrl,
       checkoutUrl: paymentSetup.invoiceUrl,
     }).catch((emailErr: any) => {
-      console.warn('Invoice alert failed to send in background:', emailErr.message);
+
     });
 
     // Insert notification for user
@@ -183,7 +183,7 @@ export async function POST(req: Request) {
       payPageUrl,
     });
   } catch (error: any) {
-    console.error('Invoice API error:', error);
+
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -51,7 +51,7 @@ export default function NewInvoicePage() {
         setSavedBanks(data);
       }
     } catch (err) {
-      console.warn("Error fetching bank profiles:", err);
+
     }
   };
 
@@ -120,7 +120,7 @@ export default function NewInvoicePage() {
           });
           fetchSavedBanks();
         } catch (bankErr) {
-          console.warn("Failed to save bank profile, proceeding with invoice:", bankErr);
+
         }
       }
 
@@ -155,7 +155,7 @@ export default function NewInvoicePage() {
         setDescription("");
       }
     } catch (err: any) {
-      console.error(err);
+
       setError(err.response?.data?.error || err.message || "Failed to initiate invoice.");
     } finally {
       setLoading(false);

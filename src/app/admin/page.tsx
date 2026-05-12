@@ -174,7 +174,7 @@ export default function AdminDashboardPage() {
       // The useAuth hook will detect the session change and handle the rest
       setLoginInfo("Authentication successful. Redirecting...");
     } catch (err: any) {
-      console.error("Admin login error:", err);
+
       setLoginError(err.message || "Authentication failed.");
     } finally {
       setLoginLoading(false);
@@ -221,7 +221,7 @@ export default function AdminDashboardPage() {
   };
 
   const fetchInitialData = async () => {
-    console.log("fetchInitialData: starting...");
+
     setLoading(true);
     setDataLoadError("");
     try {
@@ -230,12 +230,12 @@ export default function AdminDashboardPage() {
         fetchInvoices(),
         fetchAuditLogs()
       ]);
-      console.log("fetchInitialData: successfully loaded all data.");
+
     } catch (err) {
-      console.error("fetchInitialData: failed to load data:", err);
+
     } finally {
       setLoading(false);
-      console.log("fetchInitialData: finished.");
+
     }
   };
 
@@ -277,7 +277,7 @@ export default function AdminDashboardPage() {
 
       setPendingUsers(mapped);
     } catch (err) {
-      console.warn("Error fetching real users:", err);
+
       setDataLoadError((prev) => prev || (err as any)?.message || "Failed to fetch pending KYC");
       setPendingUsers([]);
     }
@@ -306,7 +306,7 @@ export default function AdminDashboardPage() {
 
       setInvoices(payload?.invoices || []);
     } catch (err) {
-      console.error("Error fetching invoices:", err);
+
       setDataLoadError((prev) => prev || (err as any)?.message || "Failed to fetch invoices");
       setInvoices([]);
     }
@@ -322,7 +322,7 @@ export default function AdminDashboardPage() {
       if (!adminRes.error && adminRes.data) setAdminLogs(adminRes.data);
       if (!emailRes.error && emailRes.data) setEmailLogs(emailRes.data);
     } catch (err) {
-      console.warn("Audit log fetch error:", err);
+
     }
   };
 
@@ -359,7 +359,7 @@ export default function AdminDashboardPage() {
       setSelectedReviewUser(null);
       await Promise.all([fetchPendingUsers(), fetchAuditLogs()]);
     } catch (err) {
-      console.error("Failed to approve user:", err);
+
       const msg = (err as any)?.message || "Failed to approve";
       setDataLoadError((prev) => prev || msg);
       alert(msg);
@@ -409,7 +409,7 @@ export default function AdminDashboardPage() {
       setSelectedReviewUser(null);
       await Promise.all([fetchPendingUsers(), fetchAuditLogs()]);
     } catch (err) {
-      console.error("Failed to reject user:", err);
+
       const msg = (err as any)?.message || "Failed to reject";
       setDataLoadError((prev) => prev || msg);
       alert(msg);
@@ -447,7 +447,7 @@ export default function AdminDashboardPage() {
         alert(data.error || "Failed to decrypt bank info.");
       }
     } catch (err) {
-      console.error(err);
+
       alert("Error contacting decryption service.");
     } finally {
       setDecrypting(false);
@@ -495,7 +495,7 @@ export default function AdminDashboardPage() {
         alert(data.error || "Failed to submit settlement confirmation.");
       }
     } catch (err) {
-      console.error(err);
+
       alert("Server error confirming payout.");
     } finally {
       setSettling(false);

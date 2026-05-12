@@ -27,7 +27,7 @@ export default function CardsPage() {
       if (error) throw error;
       setCards(data || []);
     } catch (err) {
-      console.error("Error fetching cards:", err);
+
     } finally {
       setLoading(false);
     }

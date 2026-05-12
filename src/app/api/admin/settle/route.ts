@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (adminErr || !adminProfile || adminProfile.role !== 'admin') {
-      console.error(`Security breach attempt: non-admin user ${requestUser.id} tried administrative action.`);
+
       return NextResponse.json({ error: 'Access Denied: Administrative Clearance Required' }, { status: 403 });
     }
 
@@ -185,7 +185,7 @@ export async function POST(req: Request) {
         ]);
 
       if (ledgerErr) {
-        console.error('Failed to update platform ledger:', ledgerErr);
+
       }
 
       // C. Update user balance (deduct equivalent since fiat payout is fully released)
@@ -218,7 +218,7 @@ export async function POST(req: Request) {
           referenceNumber,
         });
       } catch (emailErr: any) {
-        console.warn('Settlement email failed to dispatch:', emailErr.message);
+
       }
 
       return NextResponse.json({
@@ -229,7 +229,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ error: 'Unsupported Action' }, { status: 400 });
   } catch (error: any) {
-    console.error('Administrative Settlement API Exception:', error);
+
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

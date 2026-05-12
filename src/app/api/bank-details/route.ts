@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, bankDetail: data });
   } catch (error: any) {
-    console.error('Bank details API error:', error);
+
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

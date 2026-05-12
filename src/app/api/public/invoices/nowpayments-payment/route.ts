@@ -100,7 +100,7 @@ export async function POST(req: Request) {
       invoiceUrl: invoice.nowpayment_link,
     });
   } catch (error: any) {
-    console.error('Public NOWPayments payment creation error:', error);
+
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -78,7 +78,7 @@ export default function LoginPage() {
       if (error) throw error;
       if (!data?.session) throw new Error("Sign-in failed. Please try again.");
 
-      console.log("OTP Login successful! Redirecting to /dashboard...");
+
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to verify OTP.");
