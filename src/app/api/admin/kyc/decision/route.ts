@@ -113,6 +113,16 @@ export async function POST(req: Request) {
       },
     ]);
 
+    // Insert notification for user
+    await supabase.from("notifications").insert({
+      user_id: submission.user_id,
+      title: decision === "approve" ? "KYC Approved" : "KYC Rejected",
+      message: decision === "approve" 
+        ? "Congratulations! Your KYC verification has been approved. You now have full access to Brioinc services."
+        : `Your KYC verification was rejected. Reason: ${reason}. Please re-submit with correct information.`,
+      type: decision === "approve" ? "success" : "error"
+    });
+
     try {
       const userRow = Array.isArray(submission.users) ? submission.users[0] : submission.users;
       const userEmail = userRow?.email;

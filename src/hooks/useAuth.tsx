@@ -50,6 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   async function fetchUserProfile(userId: string, email: string | undefined, userMetadata?: any) {
     if (fetchingRef.current) return;
     fetchingRef.current = true;
+    console.log("fetchUserProfile: starting for", userId);
     try {
       const { data, error } = await supabase
         .from("users")
@@ -60,6 +61,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) {
         console.error("Error fetching user profile", error);
       }
+      console.log("fetchUserProfile: database result", !!data);
 
       const metadataName = userMetadata?.name || null;
 
@@ -113,6 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       fetchingRef.current = false;
       setLoading(false);
+      console.log("fetchUserProfile: finished and loading set to false");
     }
   }
 

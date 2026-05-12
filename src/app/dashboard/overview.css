@@ -6,8 +6,8 @@
 }
 
 .balance-card {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 1rem;
   padding: 2rem;
   display: flex;
@@ -21,7 +21,7 @@
 }
 
 .balance-sub {
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   margin-bottom: 1.5rem;
 }
@@ -77,9 +77,9 @@
 }
 
 .btn-action-outline {
-  background-color: white;
-  color: #0f172a;
-  border: 1px solid #d1d5db;
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .limits-card {
@@ -147,8 +147,8 @@
 }
 
 .cards-section, .activity-section {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 1rem;
   padding: 1.5rem;
 }
@@ -231,7 +231,7 @@
   display: flex;
   align-items: center;
   padding: 1.25rem 0;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .activity-item:last-child {
@@ -256,7 +256,7 @@
 
 .activity-name {
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 

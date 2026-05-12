@@ -94,6 +94,14 @@ export async function POST(req: Request) {
       }, { status: 500 });
     }
 
+    // Insert notification for user
+    await supabase.from("notifications").insert({
+      user_id: requestUser.id,
+      title: "KYC Submitted",
+      message: "Your identity documents have been submitted and are currently under review by our team.",
+      type: "info"
+    });
+
     return NextResponse.json({ success: true, submissionId: submission.id });
   } catch (error: any) {
     console.error("KYC submission route error:", error);

@@ -181,31 +181,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleSendAdminResetEmail = async () => {
-    setLoginLoading(true);
-    setLoginError("");
-    setLoginInfo("");
-
-    try {
-      const normalizedEmail = email.trim().toLowerCase();
-      if (!normalizedEmail) throw new Error("Enter your email first.");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-        throw new Error("Invalid email address.");
-      }
-
-      const next = "/reset-password?next=/admin";
-      const redirectTo = `${window.location.origin}/auth/callback?type=recovery&next=${encodeURIComponent(next)}`;
-
-      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
-      if (error) throw error;
-
-      setLoginInfo("Password reset email sent. Check your inbox.");
-    } catch (err: any) {
-      setLoginError(err?.message || "Failed to send reset email.");
-    } finally {
-      setLoginLoading(false);
-    }
-  };
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -571,7 +546,7 @@ export default function AdminDashboardPage() {
     return matchesSearch && matchesStatus;
   });
 
-  if (authLoading || (authUser && isAdmin === null)) {
+  if (authLoading) {
     return (
       <div className="admin-login-bg" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: '1.5rem' }}>
         <div className="spinner"></div>
@@ -614,7 +589,6 @@ export default function AdminDashboardPage() {
                     required
                     placeholder="operator@brioinc.net"
                     className="login-input"
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -627,7 +601,6 @@ export default function AdminDashboardPage() {
                     required
                     placeholder="••••••••••••"
                     className="login-input"
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
@@ -637,15 +610,6 @@ export default function AdminDashboardPage() {
                   {loginLoading ? "Verifying Clearance..." : "Establish Secure Session"}
                 </button>
 
-                <button
-                  type="button"
-                  disabled={loginLoading}
-                  className="login-btn"
-                  style={{ marginTop: '1rem', background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8" }}
-                  onClick={handleSendAdminResetEmail}
-                >
-                  Reset Password
-                </button>
               </form>
             </>
           ) : (
@@ -658,7 +622,6 @@ export default function AdminDashboardPage() {
                       type="text"
                       required
                       className="login-input"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
                       value={bootstrapName}
                       onChange={(e) => setBootstrapName(e.target.value)}
                     />
@@ -670,7 +633,6 @@ export default function AdminDashboardPage() {
                       type="email"
                       required
                       className="login-input"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
                       value={bootstrapEmail}
                       onChange={(e) => setBootstrapEmail(e.target.value)}
                     />
@@ -682,7 +644,6 @@ export default function AdminDashboardPage() {
                       type="password"
                       required
                       className="login-input"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
                       value={bootstrapPassword}
                       onChange={(e) => setBootstrapPassword(e.target.value)}
                     />
@@ -712,7 +673,6 @@ export default function AdminDashboardPage() {
                       type="text"
                       required
                       className="login-input"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "white", padding: "1rem" }}
                       value={bootstrapOtp}
                       onChange={(e) => setBootstrapOtp(e.target.value)}
                     />
@@ -741,6 +701,11 @@ export default function AdminDashboardPage() {
             background: #000;
             background-image: radial-gradient(circle at center, rgba(37, 99, 235, 0.08) 0%, rgba(0,0,0,1) 70%);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
           }
           .admin-login-card {
             background: rgba(255, 255, 255, 0.02);
@@ -805,12 +770,31 @@ export default function AdminDashboardPage() {
           }
           .login-label {
             display: block;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 700;
-            color: #94a3b8;
+            color: #64748b;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.5rem;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+            text-align: center;
+          }
+          .login-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: white;
+            padding: 1.1rem;
+            border-radius: 1.25rem;
+            font-size: 1.05rem;
+            text-align: center;
+            transition: all 0.2s;
+            font-family: inherit;
+          }
+          .login-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.02);
           }
           .login-btn {
             width: 100%;

@@ -169,6 +169,14 @@ export async function POST(req: Request) {
       console.warn('Invoice alert failed to send in background:', emailErr.message);
     });
 
+    // Insert notification for user
+    await supabaseSystem.from("notifications").insert({
+      user_id: requestUser.id,
+      title: "Invoice Generated",
+      message: `Invoice ${invoiceNumber} for ${parseFloat(amount).toLocaleString()} ${currency.toUpperCase()} has been created and sent to your client.`,
+      type: "success"
+    });
+
     return NextResponse.json({
       success: true,
       invoice: updatedInvoice,
